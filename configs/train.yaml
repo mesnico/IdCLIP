@@ -1,0 +1,39 @@
+ckpt: best-contrastive-sum
+resume_dir: null
+datadir: /disks/data/DatiMaltese/
+
+# run_dir: outputs/${hydra:runtime.choices.model}_${hydra:runtime.choices.data}_${hydra:runtime.choices.data/motion_loader}
+
+dataloader:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 32
+  num_workers: 8
+
+hydra:
+  run:
+    dir: runs_single/${hydra.job.override_dirname}
+  sweep:
+    dir: runs
+    subdir: "model=${hydra:runtime.choices.model}/\
+            data=${hydra:runtime.choices.data}/\
+            loss=${hydra:runtime.choices.model/contrastive_loss}/\
+            motion=${hydra:runtime.choices.model/motion_encoder}/\
+            text=${hydra:runtime.choices.model/text_encoder}/\
+            data_rep=${data_rep}/\
+            space-dim=${common_space_dim}"
+  job:
+    config:
+      override_dirname:
+        # item_sep: /
+        exclude_keys:
+          - common_space_dim
+          - data_rep
+
+run_dir: ${hydra:runtime.output_dir}
+
+defaults:
+  - data: coco_faceswap
+  - model: idclip
+  - trainer
+  - defaults
+  - _self_

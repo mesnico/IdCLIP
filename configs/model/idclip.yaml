@@ -1,0 +1,18 @@
+defaults:
+  - _self_
+  - translator: mlp
+
+_target_: src.model.IdCLIP
+
+clip_model: 
+  _target_: clip.load
+  name: "ViT-L/14@336px"
+
+contrastive_loss:
+  _target_: src.model.InfoNCELoss
+
+lr: 5e-5
+
+train_visual_encoder: false
+train_text_encoder: false
+encoders_lr: null
