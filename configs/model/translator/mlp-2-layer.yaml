@@ -1,0 +1,4 @@
+_target_: src.model.MLPTranslator
+input_dim: 512
+output_dim: 768
+num_hidden_layers: 2
