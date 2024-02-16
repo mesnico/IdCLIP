@@ -1,0 +1,5 @@
+train_visual_encoder: shallow-vpt
+train_text_encoder: null
+encoders_lr: ${model.lr}
+
+shallow_visual_prompt_tokens: 50

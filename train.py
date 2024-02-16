@@ -15,17 +15,18 @@ def train(cfg: DictConfig):
     # Skip if training already done
     ckpt_path = Path(cfg.run_dir) / "logs/checkpoints"
     
-    if ckpt_path.exists():
-        latest_ckpt = list(ckpt_path.glob("latest-epoch*.ckpt"))
-        if len(latest_ckpt) != 0:
-            # extract the number after the = sign in the filename
-            epochs = max([int(c.stem.split("=")[1]) + 1 for c in latest_ckpt])
+    # TODO: check if training is completed (maybe use a dummy file instead of checking the checkpoint folder)
+    # if ckpt_path.exists():
+    #     latest_ckpt = list(ckpt_path.glob("latest-epoch*.ckpt"))
+    #     if len(latest_ckpt) != 0:
+    #         # extract the number after the = sign in the filename
+    #         epochs = max([int(c.stem.split("=")[1]) + 1 for c in latest_ckpt])
 
-            if epochs >= cfg.trainer.max_epochs:
-                logger.info(
-                    f"Training already done. Latest checkpoint found: {latest_ckpt}"
-                )
-                return
+    #         if epochs >= cfg.trainer.max_epochs:
+    #             logger.info(
+    #                 f"Training already done. Latest checkpoint found: {latest_ckpt}"
+    #             )
+    #             return
 
     # Resuming if needed
     ckpt = None
@@ -41,6 +42,8 @@ def train(cfg: DictConfig):
         logger.info(f"The config can be found here: \n{config_path}")
 
     pl.seed_everything(cfg.seed)
+
+    # assert not (cfg.model.clip_model.shallow_visual_prompt_tokens != 0 and cfg.model.train_visual_encoder != 'shallow-vpt'), "shallow_visual_prompt_tokens != 0 is only compatible with train_visual_encoder='shallow_vpt'"
 
     logger.info("Loading the model")
     model = instantiate(cfg.model)

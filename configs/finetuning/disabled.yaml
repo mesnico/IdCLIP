@@ -1,0 +1,5 @@
+train_visual_encoder: null
+train_text_encoder: null
+encoders_lr: null
+
+shallow_visual_prompt_tokens: 0

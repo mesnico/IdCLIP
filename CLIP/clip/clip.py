@@ -91,7 +91,7 @@ def available_models() -> List[str]:
     return list(_MODELS.keys())
 
 
-def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit: bool = False, download_root: str = None):
+def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit: bool = False, download_root: str = None, shallow_visual_prompt_tokens: int = 0):
     """Load a CLIP model
 
     Parameters
@@ -136,7 +136,7 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
             state_dict = torch.load(opened_file, map_location="cpu")
 
     if not jit:
-        model = build_model(state_dict or model.state_dict()).to(device)
+        model = build_model(state_dict or model.state_dict(), shallow_visual_prompt_tokens=shallow_visual_prompt_tokens).to(device)
         if str(device) == "cpu":
             model.float()
         return model, _transform(model.visual.input_resolution)

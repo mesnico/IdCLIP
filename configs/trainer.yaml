@@ -1,13 +1,14 @@
 trainer:
   _target_: pytorch_lightning.Trainer
 
-  max_epochs: 30
+  max_epochs: 50
   log_every_n_steps: 50
   num_sanity_val_steps: 0
   check_val_every_n_epoch: 1
   val_check_interval: 0.1
   accelerator: gpu
   devices: 1
+  accumulate_grad_batches: ${gradient_accumulation_steps}
 
   callbacks:
     - _target_: pytorch_lightning.callbacks.ModelCheckpoint
@@ -38,4 +39,5 @@ trainer:
   logger:
     _target_: pytorch_lightning.loggers.TensorBoardLogger
     save_dir: ${run_dir}
+    version: ""
     name: logs

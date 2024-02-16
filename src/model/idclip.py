@@ -19,16 +19,16 @@ class IdCLIP(LightningModule):
         self,
         clip_model,
         translator: nn.Module,
-        contrastive_loss: nn.Module,
+        loss: nn.Module,
         lr: float = 1e-4,
-        train_visual_encoder: bool = False,
-        train_text_encoder: bool = False,
+        train_visual_encoder: str = None,
+        train_text_encoder: str = None,
         encoders_lr: float = 1e-6,
     ) -> None:
 
         super().__init__()
         # adding the contrastive loss
-        self.contrastive_loss_fn = contrastive_loss
+        self.loss_fn = loss
 
         # adding the CLIP model
         self.clip_model, self.transform = clip_model
@@ -45,7 +45,7 @@ class IdCLIP(LightningModule):
         self.image_to_text_map = []
 
         self.lr = lr
-        self.encoder_lr = encoders_lr
+        self.encoders_lr = encoders_lr
         self.train_visual_encoder = train_visual_encoder
         self.train_text_encoder = train_text_encoder
 
@@ -56,7 +56,7 @@ class IdCLIP(LightningModule):
         )
 
         # Compute the loss
-        contrastive_loss = self.contrastive_loss_fn(
+        contrastive_loss = self.loss_fn(
             image_features, text_features
         )
 
@@ -83,7 +83,7 @@ class IdCLIP(LightningModule):
 
         texts = torch.flatten(texts, start_dim=0, end_dim=1)
         
-        with torch.set_grad_enabled(self.train_visual_encoder):
+        with torch.set_grad_enabled(self.train_visual_encoder is not None):
             image_features = self.clip_model.encode_image(images)
 
         if facial_features is None:
@@ -119,9 +119,10 @@ class IdCLIP(LightningModule):
 
     def validation_step(self, batch: Dict, batch_idx: int, dataloader_idx: int = 0) -> Tensor:        
         bs = len(batch[0])
-        t_latents, v_latents = self.forward(*batch)
-        # t_latents = t_latents.cpu()
-        # v_latents = v_latents.cpu()
+        with torch.no_grad():
+            t_latents, v_latents = self.forward(*batch)
+        t_latents = t_latents.cpu().float()
+        v_latents = v_latents.cpu().float()
 
         # Store the latent vectors
         if dataloader_idx == 0:
@@ -190,9 +191,12 @@ class IdCLIP(LightningModule):
     # handle the optimizer
     def configure_optimizers(self):
         parameters = [{'params':self.translator_model.parameters(), 'lr': self.lr}]
-        if self.train_visual_encoder:
+        if self.train_visual_encoder == "finetune":
             parameters += [{'params':self.clip_model.visual.parameters(), 'lr': self.encoders_lr}]
-        if self.train_text_encoder:
+        elif self.train_visual_encoder == "shallow-vpt":
+            parameters += [{'params':self.clip_model.visual.shallow_visual_prompt_tokens, 'lr': self.encoders_lr}]
+            
+        if self.train_text_encoder == "finetune":
             parameters += [{'params':self.clip_model.transformer.parameters(), 'lr': self.encoders_lr}]
 
         optimizer = torch.optim.AdamW(

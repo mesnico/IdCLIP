@@ -9,18 +9,19 @@ dataloader:
   batch_size: 32
   num_workers: 8
 
+gradient_accumulation_steps: 1
+
 hydra:
   run:
     dir: runs_single/${hydra.job.override_dirname}
   sweep:
     dir: runs
-    subdir: "model=${hydra:runtime.choices.model}/\
-            data=${hydra:runtime.choices.data}/\
-            loss=${hydra:runtime.choices.model/contrastive_loss}/\
-            motion=${hydra:runtime.choices.model/motion_encoder}/\
-            text=${hydra:runtime.choices.model/text_encoder}/\
-            data_rep=${data_rep}/\
-            space-dim=${common_space_dim}"
+    subdir: "data=${hydra:runtime.choices.data}/\
+            model=${hydra:runtime.choices.model}/\
+            translator=${hydra:runtime.choices.model/translator}/\
+            loss=${hydra:runtime.choices.model/loss}/\
+            finetuning=${hydra:runtime.choices.finetuning}/\
+            lr=${model.lr}"
   job:
     config:
       override_dirname:
@@ -32,6 +33,7 @@ hydra:
 run_dir: ${hydra:runtime.output_dir}
 
 defaults:
+  - finetuning: disabled
   - data: coco_faceswap
   - model: idclip
   - trainer

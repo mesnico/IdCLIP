@@ -1,18 +1,17 @@
 defaults:
   - _self_
-  - translator: mlp
+  - translator: mlp-1-layer
+  - loss: info-nce
 
 _target_: src.model.IdCLIP
 
 clip_model: 
   _target_: clip.load
   name: "ViT-L/14@336px"
+  shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
 
-contrastive_loss:
-  _target_: src.model.InfoNCELoss
+train_visual_encoder: ${finetuning.train_visual_encoder}
+train_text_encoder: ${finetuning.train_text_encoder}
+encoders_lr: ${finetuning.encoders_lr}
 
 lr: 5e-5
-
-train_visual_encoder: false
-train_text_encoder: false
-encoders_lr: null

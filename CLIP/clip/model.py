@@ -204,11 +204,16 @@ class Transformer(nn.Module):
 
 
 class VisionTransformer(nn.Module):
-    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
+    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, shallow_visual_prompt_tokens: int = 0):
         super().__init__()
         self.input_resolution = input_resolution
         self.output_dim = output_dim
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=width, kernel_size=patch_size, stride=patch_size, bias=False)
+
+        if shallow_visual_prompt_tokens != 0:
+            self.shallow_visual_prompt_tokens = nn.Parameter(torch.randn(1, shallow_visual_prompt_tokens, width))
+        else:
+            self.shallow_visual_prompt_tokens = None
 
         scale = width ** -0.5
         self.class_embedding = nn.Parameter(scale * torch.randn(width))
@@ -226,6 +231,8 @@ class VisionTransformer(nn.Module):
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
         x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
         x = x + self.positional_embedding.to(x.dtype)
+        if self.shallow_visual_prompt_tokens is not None:
+            x = torch.cat([x, self.shallow_visual_prompt_tokens.to(x.dtype).expand(x.shape[0], -1, -1)], dim=1)
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
@@ -253,7 +260,8 @@ class CLIP(nn.Module):
                  vocab_size: int,
                  transformer_width: int,
                  transformer_heads: int,
-                 transformer_layers: int
+                 transformer_layers: int,
+                 shallow_visual_prompt_tokens: int = 0,
                  ):
         super().__init__()
 
@@ -276,7 +284,8 @@ class CLIP(nn.Module):
                 width=vision_width,
                 layers=vision_layers,
                 heads=vision_heads,
-                output_dim=embed_dim
+                output_dim=embed_dim,
+                shallow_visual_prompt_tokens=shallow_visual_prompt_tokens
             )
 
         self.transformer = Transformer(
@@ -427,7 +436,7 @@ def convert_weights(model: nn.Module):
     model.apply(_convert_weights_to_fp16)
 
 
-def build_model(state_dict: dict):
+def build_model(state_dict: dict, shallow_visual_prompt_tokens: int = 0):
     vit = "visual.proj" in state_dict
 
     if vit:
@@ -455,7 +464,8 @@ def build_model(state_dict: dict):
     model = CLIP(
         embed_dim,
         image_resolution, vision_layers, vision_width, vision_patch_size,
-        context_length, vocab_size, transformer_width, transformer_heads, transformer_layers
+        context_length, vocab_size, transformer_width, transformer_heads, transformer_layers,
+        shallow_visual_prompt_tokens=shallow_visual_prompt_tokens
     )
 
     for key in ["input_resolution", "context_length", "vocab_size"]:
@@ -463,5 +473,5 @@ def build_model(state_dict: dict):
             del state_dict[key]
 
     convert_weights(model)
-    model.load_state_dict(state_dict)
+    model.load_state_dict(state_dict, strict=False)
     return model.eval()
