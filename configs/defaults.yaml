@@ -1,6 +1,7 @@
 # @package __global__
 
 run_dir: logs
+datadir: /disks/data/DatiMaltese/
 
 hydra:
   run:

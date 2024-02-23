@@ -116,6 +116,54 @@ class IdCLIP(LightningModule):
                 batch_size=bs,
             )
         return losses["loss"]
+    
+    def _collate_general_retrieval_metrics(self, split="val"):
+        assert split in ["val", "test"]
+        # Compute contrastive metrics on the whole batch
+        t_latents = torch.cat(self.validation_step_t_latents)
+        v_latents = torch.cat(self.validation_step_v_latents)
+
+        text_to_image_map = torch.LongTensor(self.text_to_image_map).to(t_latents.device)
+        image_to_text_map = torch.LongTensor(self.image_to_text_map).to(v_latents.device)
+
+        # Compute the recall@k metrics
+        k_vals = [1, 5, 10, 50]
+        contrastive_metrics = recall_at_k(
+            v_latents, t_latents, image_to_text_map, text_to_image_map, k_vals
+        )
+        contrastive_metrics['contrastive_sum'] = sum(contrastive_metrics.values())
+
+        return contrastive_metrics
+    
+    def _collate_entity_retrieval_metrics(self, split="val"):
+        assert split in ["val", "test"]
+        # Compute entity metrics on the whole batch
+        t_entity_latents = torch.cat(self.validation_step_t_entity_latents)
+        v_latents = torch.cat(self.validation_step_v_latents)
+
+        # Get the entities dataset
+        k_vals = [1, 5, 10, 50]
+        
+        dataloaders = self.trainer.val_dataloaders if split == "val" else self.trainer.test_dataloaders
+        dataloader = dataloaders[1] if isinstance(dataloaders, list) and len(dataloaders) == 2 else dataloaders
+        dataset = dataloader.dataset
+
+        entities_metrics = only_tok_metrics(
+            v_latents, t_entity_latents, dataset, k_vals
+        )
+        entities_metrics['entities_sum'] = sum(entities_metrics.values())
+
+        return entities_metrics
+
+    def test_step(self, batch: Dict, batch_idx: int, dataloader_idx: int = 0) -> Tensor:
+        # is the same logic of the validation step, except that (weird trick) we replace the dataloader_idx based on the
+        # kind of dataloader we are using:
+        # - dataloader_idx = 0 -> general retrieval dataloader
+        # - dataloader_idx = 1 -> entities retrieval dataloader
+        dataset = self.trainer.test_dataloaders.dataset
+        dataloader_idx = 1 if dataset.only_TOK else 0
+
+        self.validation_step(batch, batch_idx, dataloader_idx)
 
     def validation_step(self, batch: Dict, batch_idx: int, dataloader_idx: int = 0) -> Tensor:        
         bs = len(batch[0])
@@ -128,10 +176,12 @@ class IdCLIP(LightningModule):
         if dataloader_idx == 0:
             # store the 5-per-image text latents carrying the tok part + original caption
             self.validation_step_t_latents.append(t_latents)
-            self.validation_step_v_latents.append(v_latents)
         elif dataloader_idx == 1:
-            # store only the latent for the tok (entity) part (the images are unchanged)
             self.validation_step_t_entity_latents.append(t_latents)
+
+        # append image latents only once
+        if (len(self.validation_step_t_latents) == 0) or (len(self.validation_step_t_entity_latents) == 0):
+            self.validation_step_v_latents.append(v_latents)
 
         if dataloader_idx == 0:
             # update some data structures used to compute retrieval metrics
@@ -149,39 +199,38 @@ class IdCLIP(LightningModule):
                 self.text_to_image_map += [batch_idx * batch_size + i] * captions_per_image
 
     def on_validation_epoch_end(self):
-        # Compute contrastive metrics on the whole batch
-        t_latents = torch.cat(self.validation_step_t_latents)
-        t_entity_latents = torch.cat(self.validation_step_t_entity_latents)
-        v_latents = torch.cat(self.validation_step_v_latents)
-
-        text_to_image_map = torch.LongTensor(self.text_to_image_map).to(t_latents.device)
-        image_to_text_map = torch.LongTensor(self.image_to_text_map).to(v_latents.device)
-
-        # Compute the recall@k metrics
-        k_vals = [1, 5, 10, 50]
-        contrastive_metrics = recall_at_k(
-            v_latents, t_latents, image_to_text_map, text_to_image_map, k_vals
-        )
-
-        # Get the entities dataset
-        val_dataset = self.trainer.val_dataloaders[1].dataset
-        entities_metrics = only_tok_metrics(
-            v_latents, t_entity_latents, val_dataset, k_vals
-        )
+        contrastive_metrics = self._collate_general_retrieval_metrics(split="val")
+        entities_metrics = self._collate_entity_retrieval_metrics(split="val")
 
         metrics = {**contrastive_metrics, **entities_metrics}
-        metrics['contrastive_sum'] = sum(contrastive_metrics.values())
-        metrics['entities_sum'] = sum(entities_metrics.values())
 
         for metric_name in sorted(metrics):
-            metric_val = metrics[metric_name]
+            value = metrics[metric_name]
             self.log(
                 f"val_{metric_name}_epoch",
-                metric_val,
+                value,
                 on_epoch=True,
                 on_step=False,
             )
 
+        self._clear_lists()
+
+    def on_test_epoch_end(self) -> None:
+        if self.trainer.test_dataloaders.dataset.only_TOK:
+            metrics = self._collate_entity_retrieval_metrics(split="test")
+        else:
+            metrics = self._collate_general_retrieval_metrics(split="test")
+
+        for metric_name in sorted(metrics):
+            value = metrics[metric_name]
+            self.log(
+                f"{metric_name}",
+                value,
+                on_epoch=True,
+                on_step=False,
+            )
+
+    def _clear_lists(self):
         self.validation_step_t_latents.clear()
         self.validation_step_v_latents.clear()
         self.validation_step_t_entity_latents.clear()

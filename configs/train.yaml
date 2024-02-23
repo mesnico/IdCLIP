@@ -1,6 +1,5 @@
 ckpt: best-contrastive-sum
 resume_dir: null
-datadir: /disks/data/DatiMaltese/
 
 # run_dir: outputs/${hydra:runtime.choices.model}_${hydra:runtime.choices.data}_${hydra:runtime.choices.data/motion_loader}
 
@@ -34,7 +33,7 @@ run_dir: ${hydra:runtime.output_dir}
 
 defaults:
   - finetuning: disabled
-  - data: coco_faceswap
+  - data: coco_faceswap_5_entities
   - model: idclip
   - trainer
   - defaults
