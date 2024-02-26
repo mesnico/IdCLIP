@@ -3,3 +3,4 @@ train_text_encoder: 'finetune'
 encoders_lr: 1e-6
 
 shallow_visual_prompt_tokens: 0
+shallow_text_prompt_tokens: 0

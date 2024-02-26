@@ -9,6 +9,7 @@ clip_model:
   _target_: clip.load
   name: "ViT-L/14@336px"
   shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
+  shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
 train_visual_encoder: ${finetuning.train_visual_encoder}
 train_text_encoder: ${finetuning.train_text_encoder}

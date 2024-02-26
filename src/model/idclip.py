@@ -247,6 +247,8 @@ class IdCLIP(LightningModule):
             
         if self.train_text_encoder == "finetune":
             parameters += [{'params':self.clip_model.transformer.parameters(), 'lr': self.encoders_lr}]
+        elif self.train_text_encoder == "shallow-tpt":
+            parameters += [{'params':self.clip_model.shallow_text_prompt_tokens, 'lr': self.encoders_lr}]
 
         optimizer = torch.optim.AdamW(
             parameters,

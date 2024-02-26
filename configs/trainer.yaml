@@ -31,7 +31,6 @@ trainer:
       save_top_k: 1
       save_last: false
 
-    # TODO: add these callbacks from T2M
     - _target_: src.callback.progress.ProgressLogger
       precision: 3
     - _target_: src.callback.tqdmbar.TQDMProgressBar

@@ -1,6 +1,6 @@
 train_visual_encoder: shallow-vpt
-train_text_encoder: null
+train_text_encoder: shallow-tpt
 encoders_lr: ${model.lr}
 
 shallow_visual_prompt_tokens: 5
-shallow_text_prompt_tokens: 0
+shallow_text_prompt_tokens: 5

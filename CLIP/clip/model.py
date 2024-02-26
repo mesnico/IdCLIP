@@ -261,11 +261,13 @@ class CLIP(nn.Module):
                  transformer_width: int,
                  transformer_heads: int,
                  transformer_layers: int,
-                 shallow_visual_prompt_tokens: int = 0,
+                 num_shallow_visual_prompt_tokens: int = 0,
+                 num_shallow_text_prompt_tokens: int = 0,
                  ):
         super().__init__()
 
         self.context_length = context_length
+        self.num_shallow_text_prompt_tokens = num_shallow_text_prompt_tokens
 
         if isinstance(vision_layers, (tuple, list)):
             vision_heads = vision_width * 32 // 64
@@ -285,7 +287,7 @@ class CLIP(nn.Module):
                 layers=vision_layers,
                 heads=vision_heads,
                 output_dim=embed_dim,
-                shallow_visual_prompt_tokens=shallow_visual_prompt_tokens
+                shallow_visual_prompt_tokens=num_shallow_visual_prompt_tokens
             )
 
         self.transformer = Transformer(
@@ -299,6 +301,10 @@ class CLIP(nn.Module):
         self.token_embedding = nn.Embedding(vocab_size, transformer_width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, transformer_width))
         self.ln_final = LayerNorm(transformer_width)
+        if num_shallow_text_prompt_tokens != 0:
+            self.shallow_text_prompt_tokens = nn.Parameter(torch.randn(1, num_shallow_text_prompt_tokens, transformer_width))
+        else:
+            self.shallow_text_prompt_tokens = None
 
         self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
@@ -337,7 +343,8 @@ class CLIP(nn.Module):
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
         # pytorch uses additive attention mask; fill with -inf
-        mask = torch.empty(self.context_length, self.context_length)
+        context_length = self.context_length + self.num_shallow_text_prompt_tokens
+        mask = torch.empty(context_length, context_length)
         mask.fill_(float("-inf"))
         mask.triu_(1)  # zero out the lower diagonal
         return mask
@@ -371,6 +378,8 @@ class CLIP(nn.Module):
         #--------------------------------------------------------------------------------
         
         x = x + self.positional_embedding.type(self.dtype)
+        if self.shallow_text_prompt_tokens is not None:
+            x = torch.cat([self.shallow_text_prompt_tokens.to(x.dtype).expand(x.shape[0], -1, -1), x], dim=1)
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
@@ -378,7 +387,8 @@ class CLIP(nn.Module):
 
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        cls_idx = text.argmax(dim=-1) + self.num_shallow_text_prompt_tokens
+        x = x[torch.arange(x.shape[0]), cls_idx] @ self.text_projection
 
         return x
 
@@ -436,7 +446,9 @@ def convert_weights(model: nn.Module):
     model.apply(_convert_weights_to_fp16)
 
 
-def build_model(state_dict: dict, shallow_visual_prompt_tokens: int = 0):
+def build_model(state_dict: dict, 
+                shallow_visual_prompt_tokens: int = 0,
+                shallow_text_prompt_tokens: int = 0):
     vit = "visual.proj" in state_dict
 
     if vit:
@@ -465,7 +477,8 @@ def build_model(state_dict: dict, shallow_visual_prompt_tokens: int = 0):
         embed_dim,
         image_resolution, vision_layers, vision_width, vision_patch_size,
         context_length, vocab_size, transformer_width, transformer_heads, transformer_layers,
-        shallow_visual_prompt_tokens=shallow_visual_prompt_tokens
+        num_shallow_visual_prompt_tokens=shallow_visual_prompt_tokens,
+        num_shallow_text_prompt_tokens=shallow_text_prompt_tokens
     )
 
     for key in ["input_resolution", "context_length", "vocab_size"]:
