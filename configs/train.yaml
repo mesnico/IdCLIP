@@ -3,11 +3,7 @@ resume_dir: null
 
 # run_dir: outputs/${hydra:runtime.choices.model}_${hydra:runtime.choices.data}_${hydra:runtime.choices.data/motion_loader}
 
-dataloader:
-  _target_: torch.utils.data.DataLoader
-  batch_size: 32
-  num_workers: 8
-
+batch_size: 32
 gradient_accumulation_steps: 1
 
 hydra:
@@ -19,6 +15,7 @@ hydra:
             model=${hydra:runtime.choices.model}/\
             translator=${hydra:runtime.choices.model/translator}/\
             loss=${hydra:runtime.choices.model/loss}/\
+            training-setup=${hydra:runtime.choices.training_setup}/\
             finetuning=${hydra:runtime.choices.finetuning}/\
             lr=${model.lr}"
   job:
@@ -34,6 +31,7 @@ run_dir: ${hydra:runtime.output_dir}
 defaults:
   - finetuning: disabled
   - data: coco_faceswap_5_entities
+  - training_setup: with_entities
   - model: idclip
   - trainer
   - defaults

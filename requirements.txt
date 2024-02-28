@@ -8,3 +8,4 @@ pytorch-lightning==2.1.3
 ipykernel
 colorlog
 tensorboard
+more_itertools

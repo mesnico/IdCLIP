@@ -316,6 +316,7 @@ class CocoDetection_training(VisionDataset):
         else:
             image = self._load_image(id['id_image'])
             target_partial = self._load_target(id['id_caption']) # concatenare "Image with [TOK], ..."
+            entity = None
         
         if self.features is not None:
             if self.mod_cap and self.key_words is not None:
@@ -359,8 +360,15 @@ class CocoDetection_training(VisionDataset):
                         if re.search(fr',(?!\s)', target[0]):
                             target[0] = re.sub(fr',(?![\s\d])', ', ', target[0])
             else:
-                target = ["An image with [TOK], "+str(target_partial)]
+                target = ["An image with [TOK]."+str(target_partial)]
 
+            target_only_entity = ["An image with [TOK]."]
+            if self.target_transform:
+                target_only_entity = self.target_transform(target_only_entity)
+
+            target_original = [target_partial]
+            if self.target_transform:
+                target_original = self.target_transform(target_original)
             
             if self.face_swap_train:
                 list_features = self.features[id['id_image_entity']].unsqueeze(0) # possibile ripetizione delle features
@@ -382,9 +390,9 @@ class CocoDetection_training(VisionDataset):
             image, target = self.transforms(image, target) #*-*--*-*
 
         if self.features is not None:
-            return image, target, list_features #*-*-*-*- 
+            return image, target, list_features, target_only_entity, target_original, entity #*-*-*-*- 
         else:
-            return image, target, target
+            return image, target, target, target_only_entity, entity
 
     def __len__(self) -> int:
         return len(self.dict_data)
@@ -393,3 +401,25 @@ class CocoDetection_training(VisionDataset):
 class CocoCaptions_training(CocoDetection_training):
     def _load_target(self, id: int) -> str:
         return super()._load_target(id)
+
+
+if __name__ == '__main__':
+    # test dataset
+    from sampler import GeneralAndEntitiesPairsSampler
+    import clip
+    _, transform = clip.load("ViT-B/32")
+    target_transform=lambda texts: clip.tokenize(texts[:5])
+    datadir = "/disks/data/DatiMaltese/"
+    dataset = CocoDetection_training(
+        root=f"{datadir}/coco_dataset/coco_train_swapped",
+        annFile=f"{datadir}/coco_dataset/annotations/captions_train2017.json",
+        features_json=f"{datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json",
+        transform=transform,
+        target_transform=target_transform,
+        face_swap_train=True
+    )
+
+    batch_sampler = GeneralAndEntitiesPairsSampler(dataset, batch_size=32)
+    loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler)
+    for batch in loader:
+        print(batch)

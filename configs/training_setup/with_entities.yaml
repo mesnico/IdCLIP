@@ -1,0 +1,6 @@
+# @package _global_
+
+training_setup:
+  with_entities: true
+  only_entities: false
+  coco_original: false

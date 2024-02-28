@@ -24,6 +24,7 @@ class IdCLIP(LightningModule):
         train_visual_encoder: str = None,
         train_text_encoder: str = None,
         encoders_lr: float = 1e-6,
+        training_setup: Optional[Dict] = None,
     ) -> None:
 
         super().__init__()
@@ -52,12 +53,12 @@ class IdCLIP(LightningModule):
     def compute_loss(self, batch: Dict, return_all=False) -> Dict:
         # Forward pass
         text_features, image_features = self.forward(
-            *batch
+            images, texts, facial_features
         )
 
         # Compute the loss
         contrastive_loss = self.loss_fn(
-            image_features, text_features
+            image_features, text_features, 
         )
 
         # Add the logits to the loss dict

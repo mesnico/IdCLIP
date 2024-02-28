@@ -6,6 +6,7 @@ from src.config import read_config, save_config
 import pytorch_lightning as pl
 from pathlib import Path
 import clip
+from src.data.collate import CollateGeneralTextAndEntitiesText
 
 logger = logging.getLogger(__name__)
 
@@ -52,24 +53,27 @@ def train(cfg: DictConfig):
     target_transform=lambda texts: clip.tokenize(texts[:5])
 
     logger.info("Loading the dataloaders")
-    train_dataset = instantiate(cfg.data.train, transform=transform, target_transform=target_transform)
-    val_dataset_general_retrieval = instantiate(cfg.data.val_general_retrieval, transform=transform, target_transform=target_transform)
-    val_dataset_entities_retrieval = instantiate(cfg.data.val_entities_retrieval, transform=transform, target_transform=target_transform)
+    train_dataset = instantiate(cfg.data.train.dataset, transform=transform, target_transform=target_transform)
+    val_dataset_general_retrieval = instantiate(cfg.data.val_general_retrieval.dataset, transform=transform, target_transform=target_transform)
+    val_dataset_entities_retrieval = instantiate(cfg.data.val_entities_retrieval.dataset, transform=transform, target_transform=target_transform)
+
+    collator = CollateGeneralTextAndEntitiesText(cfg.data.train.default_collate)
 
     train_dataloader = instantiate(
-        cfg.dataloader,
+        cfg.data.train.dataloader,
+        batch_sampler={"dataset": train_dataset} if 'batch_sampler' in cfg.data.train.dataloader else None,
         dataset=train_dataset,
-        shuffle=True,
+        collate_fn=collator,
     )
 
     val_dataloader_general_retrieval = instantiate(
-        cfg.dataloader,
+        cfg.data.dataloader,
         dataset=val_dataset_general_retrieval,
         shuffle=False,
     )
 
     val_dataloader_entities_retrieval = instantiate(
-        cfg.dataloader,
+        cfg.data.dataloader,
         dataset=val_dataset_entities_retrieval,
         shuffle=False,
     )

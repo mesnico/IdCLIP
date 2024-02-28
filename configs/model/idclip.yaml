@@ -14,5 +14,6 @@ clip_model:
 train_visual_encoder: ${finetuning.train_visual_encoder}
 train_text_encoder: ${finetuning.train_text_encoder}
 encoders_lr: ${finetuning.encoders_lr}
+training_setup: ${training_setup}
 
 lr: 5e-5
