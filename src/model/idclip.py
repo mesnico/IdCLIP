@@ -49,20 +49,42 @@ class IdCLIP(LightningModule):
         self.encoders_lr = encoders_lr
         self.train_visual_encoder = train_visual_encoder
         self.train_text_encoder = train_text_encoder
+        self.training_setup = training_setup
 
     def compute_loss(self, batch: Dict, return_all=False) -> Dict:
         # Forward pass
-        text_features, image_features = self.forward(
-            images, texts, facial_features
-        )
 
-        # Compute the loss
-        contrastive_loss = self.loss_fn(
-            image_features, text_features, 
-        )
+        loss_dict = {}
+        
+        if self.training_setup['with_entities']:
+            text_features, image_features = self.forward(
+                *batch['with_entities']
+            )
 
-        # Add the logits to the loss dict
-        loss_dict = {'contrastive': contrastive_loss}
+            # Compute the loss
+            loss_dict['with_entities'] = self.loss_fn(
+                image_features, text_features, entities=None
+            )
+
+        if self.training_setup['only_entities']:
+            text_features, image_features = self.forward(
+                *batch['only_entities']
+            )
+
+            # Compute the loss
+            loss_dict['only_entities'] = self.loss_fn(
+                image_features, text_features, entities=batch['only_entities'][3]
+            )
+
+        if self.training_setup['coco_original']:
+            text_features, image_features = self.forward(
+                *batch['coco_original']
+            )
+
+            # Compute the loss
+            loss_dict['coco_original'] = self.loss_fn(
+                image_features, text_features, entities=None
+            )
 
         loss_dict['loss'] = sum(loss_dict.values())
 
@@ -76,6 +98,7 @@ class IdCLIP(LightningModule):
         images: Tensor,
         texts: Tensor,
         facial_features: Tensor,
+        entities: Optional[List] = None,
         single_caption: bool = True,
     ) -> List[Tensor]:
         
@@ -104,7 +127,7 @@ class IdCLIP(LightningModule):
         return text_features, image_features
     
     def training_step(self, batch: Dict, batch_idx: int) -> Tensor:
-        bs = len(batch[0])
+        bs = len(batch['with_entities'][0])
         losses = self.compute_loss(batch)
 
         for loss_name in sorted(losses):

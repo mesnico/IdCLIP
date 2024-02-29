@@ -15,6 +15,7 @@ hydra:
             model=${hydra:runtime.choices.model}/\
             translator=${hydra:runtime.choices.model/translator}/\
             loss=${hydra:runtime.choices.model/loss}/\
+            tok_position=${hydra:runtime.choices.data/train}/\
             training-setup=${hydra:runtime.choices.training_setup}/\
             finetuning=${hydra:runtime.choices.finetuning}/\
             lr=${model.lr}"

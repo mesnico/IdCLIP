@@ -239,6 +239,7 @@ class CocoDetection_training(VisionDataset):
         face_swap_train: bool = False,
         mod_captions: bool = False,
         key_words: List[str] = None,
+        entity_prompts: List[str] = ["An image with [TOK]."],
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
@@ -251,6 +252,7 @@ class CocoDetection_training(VisionDataset):
         self.dict_data_partial = list(sorted(self.coco.imgs.keys()))
         self.key_words = key_words
         self.mod_cap = mod_captions
+        self.entity_prompts = entity_prompts
         ###***** DA SISTEMARE IL CODICE
         if features_json is None:
             # caso in cui devo allenare il modello con tutto coco e non devo utilizzare le features della faccia
@@ -362,7 +364,7 @@ class CocoDetection_training(VisionDataset):
             else:
                 target = ["An image with [TOK]."+str(target_partial)]
 
-            target_only_entity = ["An image with [TOK]."]
+            target_only_entity = [random.choice(self.entity_prompts)]
             if self.target_transform:
                 target_only_entity = self.target_transform(target_only_entity)
 

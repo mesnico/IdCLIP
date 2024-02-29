@@ -1,1 +1,1 @@
-_target_: src.model.InfoNCELoss
+_target_: src.model.InfoNCELossEntityAware

@@ -3,6 +3,8 @@ defaults:
   - test: general_retrieval
   - train: tok_beginning
 
+datadir: /home/messina/data_messina/DatiMaltese
+
 dataloader: &dataloader
     _target_: torch.utils.data.DataLoader
     batch_size: ${batch_size}
@@ -13,9 +15,16 @@ train:
   default_collate: true
   dataset:
     _target_: src.data.datasets.CocoCaptions_training
-    root: "${datadir}/coco_dataset/coco_train_swapped"
-    annFile: "${datadir}/coco_dataset/annotations/captions_train2017.json"
-    features_json: "${datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json"
+    root: "${data.datadir}/coco_dataset/coco_train_swapped"
+    annFile: "${data.datadir}/coco_dataset/annotations/captions_train2017.json"
+    features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json"
+    entity_prompts:
+      - "An image with [TOK]."
+      - "An image containing [TOK]"
+      - "[TOK]."
+      - "A picture of [TOK]"
+      - "[TOK] in the image."
+      - "There is [TOK] in the picture"
   dataloader: 
     <<: *dataloader
     shuffle: true
@@ -24,9 +33,9 @@ train:
 val_general_retrieval:  # 5 entities
   dataset:
     _target_: src.data.datasets.CocoCaptions
-    root: "${datadir}/coco_dataset/coco_val_swap_new/"
-    annFile: "${datadir}/coco_dataset/annotations/captions_val2017.json"
-    features_json: "${datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
+    root: "${data.datadir}/coco_dataset/coco_val_swap_new/"
+    annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
+    features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
   dataloader: 
     <<: *dataloader
@@ -34,9 +43,9 @@ val_general_retrieval:  # 5 entities
 val_entities_retrieval:  # 5 entities
   dataset:
     _target_: src.data.datasets.CocoCaptions
-    root: "${datadir}/coco_dataset/coco_val_swap_new/"
-    annFile: "${datadir}/coco_dataset/annotations/captions_val2017.json"
-    features_json: "${datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
+    root: "${data.datadir}/coco_dataset/coco_val_swap_new/"
+    annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
+    features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
     only_TOK: true
     single_caption: true
@@ -46,8 +55,8 @@ val_entities_retrieval:  # 5 entities
 test:
   dataset:
     _target_: src.data.datasets.CocoCaptions
-    root: "${datadir}/coco_dataset/coco_val_swap_new/"
-    annFile: "${datadir}/coco_dataset/annotations/captions_val2017.json"
-    features_json: "${datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_entities_test_small_faceswap.json"
+    root: "${data.datadir}/coco_dataset/coco_val_swap_new/"
+    annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
+    features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_entities_test_small_faceswap.json"
   dataloader: 
     <<: *dataloader
