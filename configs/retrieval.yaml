@@ -6,7 +6,7 @@ defaults:
 
 run_dir: ???
 
-ckpt: best-entities-sum  # best-contrastive-sum
+ckpt: # best-entities-sum  # best-contrastive-sum
 batch_size: 256
 
 trainer:
@@ -25,3 +25,4 @@ trainer:
     _target_: pytorch_lightning.loggers.CSVLogger
     save_dir: ${run_dir}/inference/${ckpt}
     name: ${hydra:runtime.choices.data/test}
+    version: ""

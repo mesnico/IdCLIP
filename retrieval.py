@@ -32,10 +32,10 @@ def retrieval(newcfg: DictConfig) -> None:
 
     pl.seed_everything(cfg.seed)
 
-    test_dataset = instantiate(newcfg.data.test, transform=transform, target_transform=target_transform)
+    test_dataset = instantiate(newcfg.data.test.dataset, transform=transform, target_transform=target_transform)
 
     test_dataloader = instantiate(
-        cfg.dataloader,
+        cfg.data.test.dataloader,
         dataset=test_dataset,
         shuffle=False,
     )
