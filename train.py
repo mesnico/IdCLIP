@@ -13,21 +13,12 @@ logger = logging.getLogger(__name__)
 
 @hydra.main(config_path="configs", config_name="train", version_base="1.3")
 def train(cfg: DictConfig):
-    # Skip if training already done
-    ckpt_path = Path(cfg.run_dir) / "logs/checkpoints"
     
-    # TODO: check if training is completed (maybe use a dummy file instead of checking the checkpoint folder)
-    # if ckpt_path.exists():
-    #     latest_ckpt = list(ckpt_path.glob("latest-epoch*.ckpt"))
-    #     if len(latest_ckpt) != 0:
-    #         # extract the number after the = sign in the filename
-    #         epochs = max([int(c.stem.split("=")[1]) + 1 for c in latest_ckpt])
-
-    #         if epochs >= cfg.trainer.max_epochs:
-    #             logger.info(
-    #                 f"Training already done. Latest checkpoint found: {latest_ckpt}"
-    #             )
-    #             return
+    # If dummy file "training_done" exists, skip training
+    run_dir = Path(cfg.run_dir)
+    if (run_dir / "training_done").exists():
+        logger.info("Training already done. Skipping")
+        return
 
     # Resuming if needed
     ckpt = None
@@ -50,7 +41,7 @@ def train(cfg: DictConfig):
     model = instantiate(cfg.model)
     transform = model.transform
 
-    target_transform=lambda texts: clip.tokenize(texts[:5])
+    target_transform=lambda texts: clip.tokenize(texts)
 
     logger.info("Loading the dataloaders")
     train_dataset = instantiate(cfg.data.train.dataset, transform=transform, target_transform=target_transform)

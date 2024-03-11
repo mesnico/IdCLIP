@@ -263,6 +263,13 @@ class IdCLIP(LightningModule):
                 on_step=False,
             )
 
+    def on_train_end(self) -> None:
+        run_path = Path(self.trainer.logger.log_dir).parent
+
+        # touch a file to signal that training has ended
+        with open(run_path / "training_done", "w") as f:
+            f.write("")
+
     def _clear_lists(self):
         self.validation_step_t_latents.clear()
         self.validation_step_v_latents.clear()
