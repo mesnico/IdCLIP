@@ -1,7 +1,7 @@
 defaults:
   - _self_
-  - test: general_retrieval
-  - train: tok_beginning
+  - test: general_retrieval_tok_beginning
+  - train: tok_beginning_multi_prompts
 
 datadir: /home/messina/data_messina/DatiMaltese
 
@@ -19,11 +19,11 @@ train:
     annFile: "${data.datadir}/coco_dataset/annotations/captions_train2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json"
     entity_prompts:
-      - "An image with [TOK]."
+      - "An image with [TOK]"
       - "An image containing [TOK]"
-      - "[TOK]."
+      - "[TOK]"
       - "A picture of [TOK]"
-      - "[TOK] in the image."
+      - "[TOK] in the image"
       - "There is [TOK] in the picture"
   dataloader: 
     <<: *dataloader
@@ -37,6 +37,13 @@ val_general_retrieval:  # 5 entities
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
+    entity_prompts:
+      - "An image with [TOK]"
+      - "An image containing [TOK]"
+      - "[TOK]"
+      - "A picture of [TOK]"
+      - "[TOK] in the image"
+      - "There is [TOK] in the picture"
   dataloader: 
     <<: *dataloader
 
@@ -49,6 +56,13 @@ val_entities_retrieval:  # 5 entities
     face_swap_train: true
     only_TOK: true
     single_caption: true
+    entity_prompts:
+      - "An image with [TOK]"
+      - "An image containing [TOK]"
+      - "[TOK]"
+      - "A picture of [TOK]"
+      - "[TOK] in the image"
+      - "There is [TOK] in the picture"
   dataloader: 
     <<: *dataloader
 

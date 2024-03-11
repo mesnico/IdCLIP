@@ -19,7 +19,7 @@ def retrieval(newcfg: DictConfig) -> None:
     cfg = read_config(run_dir)
     model = instantiate(cfg.model)
     transform = model.transform
-    target_transform=lambda texts: clip.tokenize(texts[:5])
+    target_transform=lambda texts: clip.tokenize(texts)
 
     # load the checkpoint
     ckpt_path = glob.glob(os.path.join(run_dir, "logs/checkpoints", f"{ckpt_name}*.ckpt"))

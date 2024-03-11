@@ -1,3 +1,4 @@
+import itertools
 import json
 import torch
 import os.path
@@ -37,6 +38,7 @@ class CocoDetection(VisionDataset):
         normal_behavior: bool = False,
         mod_captions: bool = False,
         key_words: List[str] = None,
+        entity_prompts: List[str] = ["An image with [TOK]"],
         only_TOK: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
@@ -56,6 +58,8 @@ class CocoDetection(VisionDataset):
         self.only_TOK = only_TOK
         self.mod_captions = mod_captions
         self.key_words = key_words
+        self.entity_prompts = entity_prompts
+
         if features_json is not None:
             with open(features_json, "r") as file_train:
                 f = json.load(file_train)
@@ -92,7 +96,7 @@ class CocoDetection(VisionDataset):
 
         return k, counter
 
-    def caption_configuration(self, caption, modality='standard'):
+    def caption_configuration(self, caption, modalities=['after', 'before', 'middle']):
         word_ref = None
         target_to_analize = caption.lower()
         count = 0
@@ -102,33 +106,40 @@ class CocoDetection(VisionDataset):
                 count += 1
                 word_ref = word
         
-        if word_ref is None or count > 1:
-            target = "An image with [TOK], "+str(caption)
-        else:
+        target = [p + ". " + str(caption) for p in self.entity_prompts]
+
+        if word_ref is not None:
             if word_ref.capitalize() in caption:
                 word_ref = word_ref.capitalize()
             elif word_ref.upper() in caption:
                 word_ref = word_ref.upper()
-
-
             caption_split = caption.split(word_ref)
-            if len(caption_split) != 2:
-                # print(caption_split, len(caption_split))
-                target = "An image with [TOK], "+str(caption)
-            else:
 
+        if word_ref is not None and count == 1 and len(caption_split) == 2:
+            # add also the in_place prompts to target
+            for modality in modalities:
                 match modality:
                     case 'after':
-                        target = caption_split[0] + word_ref + " [TOK]"+caption_split[1]
+                        t = caption_split[0] + word_ref + " [TOK]"+caption_split[1]
                     case 'before':
-                        target = caption_split[0]+"[TOK] "+word_ref+caption_split[1]
+                        t = caption_split[0]+"[TOK] "+word_ref+caption_split[1]
                     case 'middle':
-                        target = caption_split[0]+"[TOK]"+caption_split[1]
+                        t = caption_split[0]+"[TOK]"+caption_split[1]
                     case _:
-                        target = "An image with [TOK], "+str(caption)
+                        raise ValueError(f"Modality {modality} not supported")
 
-                if re.search(fr',(?!\s)', target):
-                            target = re.sub(fr',(?![\s\d])', ', ', target)
+                if re.search(fr',(?!\s)', t):
+                    t = re.sub(fr',(?![\s\d])', ', ', t)
+                
+                target.append(t)
+                
+        elif (count != 1 or len(caption_split) != 2) and self.key_words is not None:
+            # repeat some captions for the last 3 elements to have alsways the same number of elements in the list
+            # otherwise it is difficult to batch them
+            target.extend(random.choices(target, k=len(modalities)))
+
+        if len(target) == 6:
+            print('ok')
 
         return target
 
@@ -149,21 +160,25 @@ class CocoDetection(VisionDataset):
         else:
             image = self._load_image(id)
             target_partial = self._load_target(id) # concatenare "Image with [TOK], ..."
+
+        # some images have more than 5 captions, we take the first 5
+        target_partial = target_partial[:5]
         
         if self.features is not None and self.normal_behaviour == False:
             if self.only_TOK:
-                target = ["An image with [TOK], "]
+                target = [[p + "." for p in self.entity_prompts]]
             else:
                 if self.mod_captions and self.key_words is not None:
-                    target = [self.caption_configuration(str(target), modality='before') for target in target_partial]
+                    target = [self.caption_configuration(str(target), modalities=['after', 'before', 'middle']) for target in target_partial]
                 else:
-                    target = ["An image with [TOK], "+str(target) for target in target_partial]
+                    target = [[p + ". " + str(target) for p in self.entity_prompts] for target in target_partial]
             list_features = self.features[id] # 
             if not self.single_caption:
                 list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
             else:
                 list_features = list_features.unsqueeze(0)
         else:
+            raise NotImplementedError("Still not implemented for normal behavior or without facial features.")
             target = target_partial
 
         if return_element and not self.face_swap_train:
@@ -172,7 +187,17 @@ class CocoDetection(VisionDataset):
             return image, target, id.split('_')[1]
         
         if self.transforms is not None:
-            image, target = self.transforms(image, target)
+            image = self.transform(image)
+            # flatten the target list using itertools
+            num_captions = len(target)
+            assert all(len(target[i]) == len(target[i+1]) for i in range(len(target)-1))
+
+            num_prompts = len(target[0])
+            target = list(itertools.chain(*target)) # flatten the list of lists
+            target = self.target_transform(target)
+            # reshape to original shape
+            target = target.view(num_captions, num_prompts, -1)
+            # image, target = self.transforms(image, target)
 
         if self.features is not None and self.normal_behaviour == False:
             return image, target, list_features
@@ -239,7 +264,7 @@ class CocoDetection_training(VisionDataset):
         face_swap_train: bool = False,
         mod_captions: bool = False,
         key_words: List[str] = None,
-        entity_prompts: List[str] = ["An image with [TOK]."],
+        entity_prompts: List[str] = ["An image with [TOK]"],
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
@@ -333,7 +358,7 @@ class CocoDetection_training(VisionDataset):
                 
                 if word_ref is None or count > 1:
                     #print("Double subjects or not target word: ", target_partial)
-                    target = ["An image with [TOK], "+str(target_partial)]
+                    target = [random.choice(self.entity_prompts) + ". " + str(target_partial)]
                 else:
                     if word_ref.capitalize() in target_partial:
                         word_ref = word_ref.capitalize()
@@ -345,7 +370,7 @@ class CocoDetection_training(VisionDataset):
                     if len(caption_split) != 2:
                         #print("Error on caption split: ", target_partial)
                         #print("Caption Split: ",caption_split, len(caption_split))
-                        target = ["An image with [TOK], "+str(target_partial)]
+                        target = [random.choice(self.entity_prompts) + ". " + str(target_partial)]
                     else:
                         random_configuration_caption = random.randint(0,2)
 
@@ -357,14 +382,14 @@ class CocoDetection_training(VisionDataset):
                             case 2:
                                 target = [caption_split[0]+"[TOK]"+caption_split[1]]
                             case _:
-                                target = ["An image with [TOK], "+str(target_partial)]
+                                target = [random.choice(self.entity_prompts) + ". " +str(target_partial)]
 
                         if re.search(fr',(?!\s)', target[0]):
                             target[0] = re.sub(fr',(?![\s\d])', ', ', target[0])
             else:
-                target = ["An image with [TOK]."+str(target_partial)]
+                target = [random.choice(self.entity_prompts) + ". " + str(target_partial)]
 
-            target_only_entity = [random.choice(self.entity_prompts)]
+            target_only_entity = [random.choice(self.entity_prompts) + "."]
             if self.target_transform:
                 target_only_entity = self.target_transform(target_only_entity)
 
@@ -391,6 +416,11 @@ class CocoDetection_training(VisionDataset):
         if self.transforms is not None:
             image, target = self.transforms(image, target) #*-*--*-*
 
+        # artificially place the prompt dimension, used for prompt ensembling during validation
+        target = target.unsqueeze(1)
+        target_only_entity = target_only_entity.unsqueeze(1)
+        target_original = target_original.unsqueeze(1)
+
         if self.features is not None:
             return image, target, list_features, target_only_entity, target_original, entity #*-*-*-*- 
         else:
@@ -410,18 +440,94 @@ if __name__ == '__main__':
     from sampler import GeneralAndEntitiesPairsSampler
     import clip
     _, transform = clip.load("ViT-B/32")
-    target_transform=lambda texts: clip.tokenize(texts[:5])
-    datadir = "/disks/data/DatiMaltese/"
-    dataset = CocoDetection_training(
-        root=f"{datadir}/coco_dataset/coco_train_swapped",
-        annFile=f"{datadir}/coco_dataset/annotations/captions_train2017.json",
-        features_json=f"{datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json",
+    target_transform=lambda texts: clip.tokenize(texts)
+    datadir = "../data_messina/DatiMaltese/"
+    # dataset = CocoDetection_training(
+    #     root=f"{datadir}/coco_dataset/coco_train_swapped",
+    #     annFile=f"{datadir}/coco_dataset/annotations/captions_train2017.json",
+    #     features_json=f"{datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json",
+    #     transform=transform,
+    #     target_transform=target_transform,
+    #     face_swap_train=True,
+    #     entity_prompts=[
+    #        "An image with [TOK]",
+    #        "An image containing [TOK]",
+    #        "[TOK]",
+    #        "A picture of [TOK]",
+    #        "[TOK] in the image",
+    #        "There is [TOK] in the picture",
+    #     ],
+    #     key_words=[
+    #        "person",
+    #        "man",
+    #        "mother",
+    #        "father",
+    #        "dad",
+    #        "mum",
+    #        "woman",
+    #        "child",
+    #        "boy",
+    #        "guy",
+    #        "girl",
+    #        "kid",
+    #        "human",
+    #        "adult",
+    #        "male",
+    #        "female",
+    #        "lady",
+    #        "teenager",
+    #        "baby",
+    #     ],
+    #     mod_captions=True
+    # )
+
+    # batch_sampler = GeneralAndEntitiesPairsSampler(dataset, batch_size=32)
+    # loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler)
+    # for batch in loader:
+    #     print(batch)
+
+    dataset = CocoDetection(
+        root=f"{datadir}/coco_dataset/coco_val_swap_new",
+        annFile=f"{datadir}/coco_dataset/annotations/captions_val2017.json",
+        features_json=f"{datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json",
         transform=transform,
         target_transform=target_transform,
-        face_swap_train=True
+        face_swap_train=True,
+        entity_prompts=[
+           "An image with [TOK]",
+           "An image containing [TOK]",
+           "[TOK]",
+           "A picture of [TOK]",
+           "[TOK] in the image",
+           "There is [TOK] in the picture",
+        ],
+        only_TOK=True,
+        single_caption=True
+        # key_words=[
+        #    "person",
+        #    "man",
+        #    "mother",
+        #    "father",
+        #    "dad",
+        #    "mum",
+        #    "woman",
+        #    "child",
+        #    "boy",
+        #    "guy",
+        #    "girl",
+        #    "kid",
+        #    "human",
+        #    "adult",
+        #    "male",
+        #    "female",
+        #    "lady",
+        #    "teenager",
+        #    "baby",
+        # ],
+        # mod_captions=True
     )
 
-    batch_sampler = GeneralAndEntitiesPairsSampler(dataset, batch_size=32)
-    loader = torch.utils.data.DataLoader(dataset, batch_sampler=batch_sampler)
-    for batch in loader:
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False)
+
+    for batch in dataloader:
         print(batch)

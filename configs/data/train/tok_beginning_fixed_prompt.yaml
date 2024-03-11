@@ -1,0 +1,4 @@
+dataset:
+  face_swap_train: true
+  entity_prompts:
+      - "An image with [TOK]"

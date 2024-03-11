@@ -18,16 +18,16 @@ trainer:
       save_last: false
     - _target_: pytorch_lightning.callbacks.ModelCheckpoint
       filename: best-contrastive-sum-{epoch}
-      monitor: val_contrastive_sum_epoch
+      monitor: val_contrastive_t2i_sum_epoch
       mode: max
-      every_n_train_steps: 2000
+      save_on_train_epoch_end: false  # save after each validation step
       save_top_k: 1
       save_last: false
     - _target_: pytorch_lightning.callbacks.ModelCheckpoint
       filename: best-entities-sum-{epoch}
-      monitor: val_entities_sum_epoch
+      monitor: val_entities_kmin_sum_epoch
       mode: max
-      every_n_train_steps: 2000
+      save_on_train_epoch_end: false  # save after each validation step
       save_top_k: 1
       save_last: false
 

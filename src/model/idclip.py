@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Dict, Optional
 from .evaluation import only_tok_metrics, recall_at_k
 from torch import Tensor
@@ -105,7 +106,8 @@ class IdCLIP(LightningModule):
         facial_features = torch.flatten(facial_features, start_dim=0, end_dim=1)
         translated_features = self.translator_model(facial_features)
 
-        texts = torch.flatten(texts, start_dim=0, end_dim=1)
+        bs, nc, np, _ = texts.shape
+        texts = torch.flatten(texts, start_dim=0, end_dim=2)
         
         with torch.set_grad_enabled(self.train_visual_encoder is not None):
             image_features = self.clip_model.encode_image(images)
@@ -113,7 +115,12 @@ class IdCLIP(LightningModule):
         if facial_features is None:
             text_features = self.clip_model.encode_text(texts)
         else:
+            translated_features = translated_features.unsqueeze(1).expand(-1, np, -1, -1).flatten(start_dim=0, end_dim=1)
             text_features = self.clip_model.encode_text(texts, translated_features)
+
+        # mean pooling over different prompts
+        text_features = text_features.view(bs * nc, np, -1)
+        text_features = text_features.mean(dim=1)
 
         # normalized features
         image_features = image_features / image_features.norm(dim=1, keepdim=True)
@@ -156,6 +163,7 @@ class IdCLIP(LightningModule):
             v_latents, t_latents, image_to_text_map, text_to_image_map, k_vals
         )
         contrastive_metrics['contrastive_sum'] = sum(contrastive_metrics.values())
+        contrastive_metrics['contrastive_t2i_sum'] = sum([v for k, v in contrastive_metrics.items() if 't2i' in k])
 
         return contrastive_metrics
     
@@ -176,6 +184,7 @@ class IdCLIP(LightningModule):
             v_latents, t_entity_latents, dataset, k_vals
         )
         entities_metrics['entities_sum'] = sum(entities_metrics.values())
+        entities_metrics['entities_kmin_sum'] = sum([v for k, v in entities_metrics.items() if 'kmin' in k])
 
         return entities_metrics
 
@@ -210,7 +219,7 @@ class IdCLIP(LightningModule):
         if dataloader_idx == 0:
             # update some data structures used to compute retrieval metrics
             # text has shape B x 5 x 77
-            batch_size, captions_per_image, _ = batch[1].shape
+            batch_size, captions_per_image, _, _ = batch[1].shape
 
             # Update text_to_image_map and image_to_text_map for this batch
             for i in range(batch_size):
