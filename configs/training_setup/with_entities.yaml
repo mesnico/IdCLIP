@@ -2,5 +2,6 @@
 
 training_setup:
   with_entities: true
+  with_entities_weight: 1.0
   only_entities: false
   coco_original: false

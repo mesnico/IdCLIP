@@ -51,6 +51,13 @@ class IdCLIP(LightningModule):
         self.train_visual_encoder = train_visual_encoder
         self.train_text_encoder = train_text_encoder
         self.training_setup = training_setup
+        self.losses_weights = {
+            k.replace('_weight', ''): v # nn.Parameter(torch.log(torch.tensor([v]).cuda())) 
+            for k, v in training_setup.items() 
+            if k.endswith('_weight') and training_setup[k.split('_weight')[0]]
+        }
+        # if len(self.losses_weights) == 1 and 'with_entities' in self.losses_weights:
+        #     self.losses_weights = {'with_entities': torch.tensor(1.0).cuda()}
 
     def compute_loss(self, batch: Dict, return_all=False) -> Dict:
         # Forward pass
@@ -87,7 +94,9 @@ class IdCLIP(LightningModule):
                 image_features, text_features, entities=None
             )
 
-        loss_dict['loss'] = sum(loss_dict.values())
+        loss_dict['loss'] = sum(
+            self.losses_weights[k] * loss_dict[k] for k in loss_dict
+        )
 
         if return_all:
             return loss_dict, image_features, text_features
@@ -264,11 +273,12 @@ class IdCLIP(LightningModule):
             )
 
     def on_train_end(self) -> None:
-        run_path = Path(self.trainer.logger.log_dir).parent
-
-        # touch a file to signal that training has ended
-        with open(run_path / "training_done", "w") as f:
-            f.write("")
+        # if number of epochs matches the max_epochs, then training has surely ended
+        if self.current_epoch >= self.trainer.max_epochs - 1:
+            run_path = Path(self.trainer.logger.log_dir).parent
+            # touch a file to signal that training has ended
+            with open(run_path / "training_done", "w") as f:
+                f.write("")
 
     def _clear_lists(self):
         self.validation_step_t_latents.clear()

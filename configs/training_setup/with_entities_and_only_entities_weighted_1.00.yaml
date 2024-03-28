@@ -15,5 +15,7 @@ data:
 
 training_setup:
   with_entities: true
+  with_entities_weight: 1.0
   only_entities: true
+  only_entities_weight: 1.0
   coco_original: false

@@ -1,0 +1,21 @@
+# @package _global_
+
+data:
+  train:
+    dataloader:
+      batch_sampler:
+        _target_: src.data.sampler.GeneralAndEntitiesPairsSampler
+        batch_size: ${batch_size}
+      
+      # put batch size and shuffle to the default values of Dataloader so that we can use the one from the batch_sampler
+      batch_size: 1 
+      shuffle: false
+      
+    default_collate: false
+
+training_setup:
+  with_entities: true
+  with_entities_weight: 1.0
+  only_entities: true
+  only_entities_weight: 0.02
+  coco_original: false

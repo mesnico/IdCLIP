@@ -56,11 +56,11 @@ class InfoNCELossEntityAware(nn.Module):
             mask = entities_ids.unsqueeze(1).expand(-1, bs) == entities_ids.unsqueeze(0).expand(bs, -1)
             mask = mask.float()
             s_distribution = F.softmax(mask, dim=1)
-            img_distribution = F.softmax(mask, dim=0)
+            img_distribution = F.softmax(mask, dim=0).t()
 
             loss = (
-                F.cross_entropy(logits_per_image, s_distribution) +
-                F.cross_entropy(logits_per_text, img_distribution)
+                F.cross_entropy(logits_per_text, img_distribution) +
+                F.cross_entropy(logits_per_image, s_distribution)
             ) / 2
 
         return loss
