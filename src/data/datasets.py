@@ -178,8 +178,7 @@ class CocoDetection(VisionDataset):
             else:
                 list_features = list_features.unsqueeze(0)
         else:
-            raise NotImplementedError("Still not implemented for normal behavior or without facial features.")
-            target = target_partial
+            target = [[t] for t in target_partial]
 
         if return_element and not self.face_swap_train:
             return image, target
@@ -202,7 +201,7 @@ class CocoDetection(VisionDataset):
         if self.features is not None and self.normal_behaviour == False:
             return image, target, list_features
         else:
-            return image, target, target
+            return image, target
 
     def __len__(self) -> int:
         return len(self.ids)

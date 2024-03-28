@@ -1,0 +1,3 @@
+dataset:
+  face_swap_train: true
+  normal_behavior: true

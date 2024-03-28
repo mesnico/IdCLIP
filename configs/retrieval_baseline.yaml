@@ -1,0 +1,27 @@
+defaults:
+  - defaults
+  - model: clipbase
+  - data: coco_faceswap_5_entities
+  - override data/test: general_retrieval_baseline
+  - _self_
+
+run_dir: runs/data=${hydra:runtime.choices.data}/baseline
+batch_size: 256
+
+trainer:
+  _target_: pytorch_lightning.Trainer
+
+  accelerator: gpu
+  devices: 1
+
+  callbacks:
+    # TODO: add these callbacks from T2M
+    - _target_: src.callback.progress.ProgressLogger
+      precision: 3
+    - _target_: src.callback.tqdmbar.TQDMProgressBar
+
+  logger:
+    _target_: pytorch_lightning.loggers.CSVLogger
+    save_dir: ${run_dir}/inference
+    name: ${hydra:runtime.choices.data/test}
+    version: ""

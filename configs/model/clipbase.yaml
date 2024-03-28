@@ -1,0 +1,7 @@
+_target_: src.model.CLIPBaseline
+
+clip_model: 
+  _target_: clip.load
+  name: "ViT-L/14@336px"
+  shallow_visual_prompt_tokens: 0
+  shallow_text_prompt_tokens: 0
