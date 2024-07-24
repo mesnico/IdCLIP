@@ -5,12 +5,13 @@ resume_dir: null
 
 batch_size: 32
 gradient_accumulation_steps: 1
+base_dir: runs
 
 hydra:
   run:
     dir: runs_single/${hydra.job.override_dirname}
   sweep:
-    dir: runs
+    dir: ${base_dir}
     subdir: "data=${hydra:runtime.choices.data}/\
             model=${hydra:runtime.choices.model}/\
             translator=${hydra:runtime.choices.model/translator}/\

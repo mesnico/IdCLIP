@@ -33,9 +33,15 @@ TRAINING_SETUPS=(
 FINETUNINGS=(
     disabled
     shallow-vpt-5
+
+LOSSES=(
+    # info-nce
+    info-nce-entity-bce
 )
 
+for CKPT in ${CKPTS[@]}; do
 for TRANSLATOR in ${TRANSLATORS[@]}; do
+        for LOSS in ${LOSSES[@]}; do
     for TOK_POSITION in ${TOK_POSITIONS[@]}; do
         for TRAINING_SETUP in ${TRAINING_SETUPS[@]}; do
             for FINETUNING in ${FINETUNINGS[@]}; do

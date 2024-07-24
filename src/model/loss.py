@@ -26,9 +26,10 @@ class InfoNCELoss(nn.Module):
         return loss
     
 class InfoNCELossEntityAware(nn.Module):
-    def __init__(self, **kwargs):
+    def __init__(self, entity_loss='crossentropy', **kwargs):
         super().__init__()
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.entity_loss = entity_loss
 
     def forward(self, im, s, entities=None, **kwargs):
         bs = im.shape[0]
@@ -55,12 +56,19 @@ class InfoNCELossEntityAware(nn.Module):
             entities_ids = torch.LongTensor(entities_ids).to(im.device)
             mask = entities_ids.unsqueeze(1).expand(-1, bs) == entities_ids.unsqueeze(0).expand(bs, -1)
             mask = mask.float()
-            s_distribution = F.softmax(mask, dim=1)
-            img_distribution = F.softmax(mask, dim=0).t()
 
-            loss = (
-                F.cross_entropy(logits_per_text, img_distribution) +
-                F.cross_entropy(logits_per_image, s_distribution)
-            ) / 2
+            if self.entity_loss == 'crossentropy':
+                s_distribution = F.softmax(mask, dim=1)
+                img_distribution = F.softmax(mask, dim=0).t()
+
+                loss = (
+                    F.cross_entropy(logits_per_text, img_distribution) +
+                    F.cross_entropy(logits_per_image, s_distribution)
+                ) / 2
+                
+            elif self.entity_loss == 'bce':
+                targets = mask.view(-1)
+                scores = logits_per_image.view(-1)
+                loss = F.binary_cross_entropy_with_logits(scores, targets)
 
         return loss
