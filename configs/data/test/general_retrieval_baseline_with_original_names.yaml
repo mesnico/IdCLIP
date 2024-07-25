@@ -1,0 +1,26 @@
+dataset:
+  face_swap_train: true
+  normal_behavior: true
+  use_original_names: true
+  key_words: 
+    - "person"
+    - "man"
+    - "mother"
+    - "father"
+    - "dad"
+    - "mum"
+    - "woman"
+    - "child"
+    - "boy"
+    - "guy"
+    - "girl"
+    - "kid"
+    - "human"
+    - "adult"
+    - "male"
+    - "female"
+    - "lady"
+    - "teenager"
+    - "baby"
+  entity_prompts:
+    - The person in the photo is [TOK]

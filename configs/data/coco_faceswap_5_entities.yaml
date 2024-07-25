@@ -18,6 +18,7 @@ train:
     root: "${data.datadir}/coco_dataset/coco_train_swapped"
     annFile: "${data.datadir}/coco_dataset/annotations/captions_train2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json"
+    entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     entity_prompts:
       - "An image with [TOK]"
       - "An image containing [TOK]"
@@ -37,6 +38,7 @@ val_general_retrieval:  # 5 entities
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
+    entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     entity_prompts:
       - "An image with [TOK]"
       - "An image containing [TOK]"
@@ -54,6 +56,7 @@ val_entities_retrieval:  # 5 entities
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
+    entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     only_TOK: true
     single_caption: true
     entity_prompts:
@@ -72,5 +75,6 @@ test:
     root: "${data.datadir}/coco_dataset/coco_val_swap_new/"
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_entities_test_small_faceswap.json"
+    entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
   dataloader: 
     <<: *dataloader

@@ -7,6 +7,7 @@ from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
 import random
 import re
+import csv
 from collections import Counter
 
 from torchvision.datasets import VisionDataset
@@ -38,6 +39,8 @@ class CocoDetection(VisionDataset):
         normal_behavior: bool = False,
         mod_captions: bool = False,
         key_words: List[str] = None,
+        entities_to_names_file: str = None,
+        use_original_names: bool = False,
         entity_prompts: List[str] = ["An image with [TOK]"],
         only_TOK: bool = False,
         transform: Optional[Callable] = None,
@@ -71,6 +74,13 @@ class CocoDetection(VisionDataset):
         else:
             self.ids = self.ids_tot
             self.features = None
+
+        if use_original_names:
+            with open(entities_to_names_file, "r") as file:
+                reader = csv.DictReader(file, skipinitialspace=True)
+                self.entity_to_name = {row["Class_ID"]: row["Name"].replace('_', ' ') for row in reader}
+        else:
+            self.entity_to_name = None
         #print(self.ids)
 
     def _load_image(self, id: int, entity = None) -> Image.Image:
@@ -96,7 +106,7 @@ class CocoDetection(VisionDataset):
 
         return k, counter
 
-    def caption_configuration(self, caption, modalities=['after', 'before', 'middle']):
+    def caption_configuration(self, caption, modalities=['after', 'before', 'middle'], to_add="[TOK]"):
         word_ref = None
         target_to_analize = caption.lower()
         count = 0
@@ -106,7 +116,9 @@ class CocoDetection(VisionDataset):
                 count += 1
                 word_ref = word
         
-        target = [p + ". " + str(caption) for p in self.entity_prompts]
+        # TODO: little ack to not modify the original entity prompts written in the configuration (which only contain TOK)
+        mod_entity_prompts = [p.replace('[TOK]', to_add) for p in self.entity_prompts]
+        target = [p + ". " + str(caption) for p in mod_entity_prompts]
 
         if word_ref is not None:
             if word_ref.capitalize() in caption:
@@ -120,11 +132,11 @@ class CocoDetection(VisionDataset):
             for modality in modalities:
                 match modality:
                     case 'after':
-                        t = caption_split[0] + word_ref + " [TOK]"+caption_split[1]
+                        t = caption_split[0] + word_ref + " " + to_add + caption_split[1]
                     case 'before':
-                        t = caption_split[0]+"[TOK] "+word_ref+caption_split[1]
+                        t = caption_split[0]+ to_add + " " + word_ref + caption_split[1]
                     case 'middle':
-                        t = caption_split[0]+"[TOK]"+caption_split[1]
+                        t = caption_split[0] + to_add + caption_split[1]
                     case _:
                         raise ValueError(f"Modality {modality} not supported")
 
@@ -138,8 +150,8 @@ class CocoDetection(VisionDataset):
             # otherwise it is difficult to batch them
             target.extend(random.choices(target, k=len(modalities)))
 
-        if len(target) == 6:
-            print('ok')
+        # if len(target) == 6:
+        #     print('ok')
 
         return target
 
@@ -155,6 +167,7 @@ class CocoDetection(VisionDataset):
             list_id_entity = id.split('_')
             id_swap = int(list_id_entity[0])
             entity = list_id_entity[1]
+            entity_name = self.entity_to_name[entity] if self.entity_to_name else None
             image = self._load_image(id_swap, entity)
             target_partial = self._load_target(id_swap)
         else:
@@ -177,6 +190,11 @@ class CocoDetection(VisionDataset):
                 list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
             else:
                 list_features = list_features.unsqueeze(0)
+
+        elif self.entity_to_name is not None:
+            # this is normal behavior, but we use the real proper name (e.g. Mario Rossi) instead of the generic name (e.g. person)
+            target = [self.caption_configuration(str(target), modalities=['middle'], to_add=entity_name) for target in target_partial]
+
         else:
             target = [[t] for t in target_partial]
 

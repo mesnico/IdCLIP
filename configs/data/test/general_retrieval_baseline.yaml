@@ -1,3 +1,4 @@
 dataset:
   face_swap_train: true
   normal_behavior: true
+  use_original_names: false
