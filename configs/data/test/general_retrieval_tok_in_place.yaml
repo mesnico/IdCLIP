@@ -1,6 +1,6 @@
 dataset:
   face_swap_train: true
-  mod_captions: true
+  mod_captions: "[TOK]"
   key_words: 
     - "person"
     - "man"

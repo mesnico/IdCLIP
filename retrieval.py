@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 from omegaconf import DictConfig
 import logging
 import hydra
 import glob
 import clip
 import pytorch_lightning as pl
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 
 from src.config import read_config
@@ -29,6 +31,11 @@ def retrieval(newcfg: DictConfig) -> None:
     # state_dict = torch.load(ckpt_path)["state_dict"]
     # model.load_state_dict(state_dict)
     # logger.info("Model loaded")
+
+    # delete the already-existing metrics
+    metrics_csv = Path(newcfg.run_dir) / 'inference' / newcfg.ckpt / HydraConfig.get().runtime.choices['data/test'] / 'metrics.csv'
+    if metrics_csv.exists():
+        metrics_csv.unlink()
 
     pl.seed_everything(cfg.seed)
 

@@ -37,7 +37,7 @@ class CocoDetection(VisionDataset):
         face_swap_train: bool = False,
         single_caption: bool = False,
         normal_behavior: bool = False,
-        mod_captions: bool = False,
+        mod_captions: str = None,
         key_words: List[str] = None,
         entities_to_names_file: str = None,
         use_original_names: bool = False,
@@ -81,6 +81,9 @@ class CocoDetection(VisionDataset):
                 self.entity_to_name = {row["Class_ID"]: row["Name"].replace('_', ' ') for row in reader}
         else:
             self.entity_to_name = None
+
+        if self.mod_captions:
+            assert not ('[NAME]' in self.mod_captions and not self.entity_to_name), "You should set use_original_names to True to use the original VGGFace2 names."
         #print(self.ids)
 
     def _load_image(self, id: int, entity = None) -> Image.Image:
@@ -106,7 +109,7 @@ class CocoDetection(VisionDataset):
 
         return k, counter
 
-    def caption_configuration(self, caption, modalities=['after', 'before', 'middle'], to_add="[TOK]"):
+    def caption_configuration(self, caption, modalities=['after', 'before', 'middle'], template="[TOK]", entity_name=None):
         word_ref = None
         target_to_analize = caption.lower()
         count = 0
@@ -116,9 +119,10 @@ class CocoDetection(VisionDataset):
                 count += 1
                 word_ref = word
         
-        # TODO: little ack to not modify the original entity prompts written in the configuration (which only contain TOK)
-        mod_entity_prompts = [p.replace('[TOK]', to_add) for p in self.entity_prompts]
+        mod_entity_prompts = [p.replace('[NAME]', entity_name) for p in self.entity_prompts]
         target = [p + ". " + str(caption) for p in mod_entity_prompts]
+
+        to_add = template.replace('[NAME]', entity_name)
 
         if word_ref is not None:
             if word_ref.capitalize() in caption:
@@ -176,15 +180,17 @@ class CocoDetection(VisionDataset):
 
         # some images have more than 5 captions, we take the first 5
         target_partial = target_partial[:5]
+
+        mod_entity_prompts = [p.replace('[NAME]', entity_name) for p in self.entity_prompts]
         
         if self.features is not None and self.normal_behaviour == False:
             if self.only_TOK:
-                target = [[p + "." for p in self.entity_prompts]]
+                target = [[p + "." for p in mod_entity_prompts]]
             else:
                 if self.mod_captions and self.key_words is not None:
-                    target = [self.caption_configuration(str(target), modalities=['after', 'before', 'middle']) for target in target_partial]
+                    target = [self.caption_configuration(str(target), modalities=['after', 'before', 'middle'], entity_name=entity_name, template=self.mod_captions) for target in target_partial]
                 else:
-                    target = [[p + ". " + str(target) for p in self.entity_prompts] for target in target_partial]
+                    target = [[p + ". " + str(target) for p in mod_entity_prompts] for target in target_partial]
             list_features = self.features[id] # 
             if not self.single_caption:
                 list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
@@ -193,7 +199,10 @@ class CocoDetection(VisionDataset):
 
         elif self.entity_to_name is not None:
             # this is normal behavior, but we use the real proper name (e.g. Mario Rossi) instead of the generic name (e.g. person)
-            target = [self.caption_configuration(str(target), modalities=['middle'], to_add=entity_name) for target in target_partial]
+            if self.only_TOK:
+                target = [[p + "." for p in mod_entity_prompts]]
+            else:
+                target = [self.caption_configuration(str(target), modalities=['middle'], entity_name=entity_name, template=self.mod_captions) for target in target_partial]
 
         else:
             target = [[t] for t in target_partial]

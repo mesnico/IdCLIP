@@ -1,0 +1,13 @@
+dataset:
+  face_swap_train: true
+  only_TOK: true
+  single_caption: true
+  normal_behavior: true
+  use_original_names: true
+  entity_prompts:
+    - "An image with [NAME]"
+    - "An image with a person whose name is [NAME]"
+    - "[NAME]"
+    - "A picture of [NAME]"
+    - "[NAME] in the image"
+    - "There is [NAME] in the picture"
