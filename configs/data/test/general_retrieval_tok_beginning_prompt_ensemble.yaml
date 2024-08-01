@@ -1,9 +1,0 @@
-dataset:
-  face_swap_train: true
-  entity_prompts:
-    - "An image with [TOK]"
-    - "An image containing [TOK]"
-    - "[TOK]"
-    - "A picture of [TOK]"
-    - "[TOK] in the image"
-    - "There is [TOK] in the picture"

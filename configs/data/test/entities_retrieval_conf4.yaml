@@ -2,8 +2,9 @@ dataset:
   face_swap_train: true
   only_TOK: true
   single_caption: true
-  normal_behavior: true
   use_original_names: true
+
+  # C_CHUNK_1 and C_CHUNK_2 are the two captions chunks generating from splitting the caption at the keyword
   templates:
     - "An image with [ENTITY]."
     - "An image with a person whose name is [ENTITY]."
@@ -13,7 +14,7 @@ dataset:
     - "There is [ENTITY] in the picture."
 
   # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
-  entity_expansion: "[T_CHUNK_1][NAME][T_CHUNK_2]"
+  entity_expansion: "An image with [TOK]. [T_CHUNK_1][NAME][T_CHUNK_2]"
     # - "[T_CHUNK_1] [TOK] [T_CHUNK_2]"
     # - "[T_CHUNK_1] [TOK] [NAME] [T_CHUNK_2]"
     # - "[T_CHUNK_1] [NAME] [TOK] [T_CHUNK_2]"

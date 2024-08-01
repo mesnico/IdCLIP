@@ -37,11 +37,11 @@ class CocoDetection(VisionDataset):
         face_swap_train: bool = False,
         single_caption: bool = False,
         normal_behavior: bool = False,
-        mod_captions: str = None,
+        templates: List[str] = None,
+        entity_expansion: str = None,
         key_words: List[str] = None,
         entities_to_names_file: str = None,
         use_original_names: bool = False,
-        entity_prompts: List[str] = ["An image with [TOK]"],
         only_TOK: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
@@ -59,9 +59,9 @@ class CocoDetection(VisionDataset):
         self.normal_behaviour = normal_behavior
         self.single_caption = single_caption
         self.only_TOK = only_TOK
-        self.mod_captions = mod_captions
+        self.templates = templates
+        self.entity_expansion = entity_expansion
         self.key_words = key_words
-        self.entity_prompts = entity_prompts
 
         if features_json is not None:
             with open(features_json, "r") as file_train:
@@ -82,8 +82,6 @@ class CocoDetection(VisionDataset):
         else:
             self.entity_to_name = None
 
-        if self.mod_captions:
-            assert not ('[NAME]' in self.mod_captions and not self.entity_to_name), "You should set use_original_names to True to use the original VGGFace2 names."
         #print(self.ids)
 
     def _load_image(self, id: int, entity = None) -> Image.Image:
@@ -109,20 +107,18 @@ class CocoDetection(VisionDataset):
 
         return k, counter
 
-    def caption_configuration(self, caption, modalities=['after', 'before', 'middle'], template="[TOK]", entity_name=None):
+    def caption_configuration(self, caption, templates=None, entity_expansion_template=None, entity_name=None):
+        assert not (any(['CAPTION' in t or 'C_CHUNK' in t for t in templates]) and caption is None)
         word_ref = None
-        target_to_analize = caption.lower()
         count = 0
-        for word in self.key_words:
-            pattern = fr'\b{word}\b'
-            if re.search(pattern, target_to_analize):
-                count += 1
-                word_ref = word
-        
-        mod_entity_prompts = [p.replace('[NAME]', entity_name) for p in self.entity_prompts]
-        target = [p + ". " + str(caption) for p in mod_entity_prompts]
 
-        to_add = template.replace('[NAME]', entity_name)
+        if self.key_words and caption is not None:
+            target_to_analize = caption.lower()
+            for word in self.key_words:
+                pattern = fr'\b{word}\b'
+                if re.search(pattern, target_to_analize):
+                    count += 1
+                    word_ref = word
 
         if word_ref is not None:
             if word_ref.capitalize() in caption:
@@ -131,33 +127,46 @@ class CocoDetection(VisionDataset):
                 word_ref = word_ref.upper()
             caption_split = caption.split(word_ref)
 
-        if word_ref is not None and count == 1 and len(caption_split) == 2:
-            # add also the in_place prompts to target
-            for modality in modalities:
-                match modality:
-                    case 'after':
-                        t = caption_split[0] + word_ref + " " + to_add + caption_split[1]
-                    case 'before':
-                        t = caption_split[0]+ to_add + " " + word_ref + caption_split[1]
-                    case 'middle':
-                        t = caption_split[0] + to_add + caption_split[1]
-                    case _:
-                        raise ValueError(f"Modality {modality} not supported")
+        templates_w_keyword = [t for t in templates if 'C_CHUNK_1' in t]
+        templates_wo_keyword = [t for t in templates if 'C_CHUNK_1' not in t]
+        new_captions = [c.replace('[CAPTION]', caption) if caption is not None else c for c in templates_wo_keyword]
 
-                if re.search(fr',(?!\s)', t):
-                    t = re.sub(fr',(?![\s\d])', ', ', t)
-                
-                target.append(t)
+        if word_ref is not None and count == 1 and len(caption_split) == 2:
+            captions = [
+                t
+                .replace('a [ENTITY]', '[ENTITY]')
+                .replace('A [ENTITY]', '[ENTITY]')
+                .replace('an [ENTITY]', '[ENTITY]')
+                .replace('An [ENTITY]', '[ENTITY]')
+                .replace('[C_CHUNK_1]', caption_split[0].strip())
+                .replace('[C_CHUNK_2]', caption_split[1].strip())
+                .replace('[KEYWORD]', word_ref)
+                for t in templates_w_keyword
+            ]
+
+            captions = [re.sub(fr',(?![\s\d])', ', ', t) if re.search(fr',(?!\s)', t) else t for t in captions]
+            new_captions.extend(captions)
                 
         elif (count != 1 or len(caption_split) != 2) and self.key_words is not None:
             # repeat some captions for the last 3 elements to have alsways the same number of elements in the list
             # otherwise it is difficult to batch them
-            target.extend(random.choices(target, k=len(modalities)))
+            new_captions.extend(random.choices(new_captions, k=len(templates_w_keyword)))
 
-        # if len(target) == 6:
-        #     print('ok')
+        # substitute [ENTITY] with the entity_expansion
+        split_captions = [c.split('[ENTITY]') if '[ENTITY]' in c else None for c in new_captions]
+        new_captions = [
+            entity_expansion_template
+            .replace('[T_CHUNK_1]', sc[0])
+            .replace('[T_CHUNK_2]', sc[1]) 
+            .replace('[NAME]', entity_name)
+            if sc is not None else c
+            for sc, c in zip(split_captions, new_captions)
+        ]
 
-        return target
+        # assert not any([('[' in c) and (']' in c) for c in new_captions]), f"Error in caption configuration: {new_captions}"
+
+        return new_captions
+        
 
     def __getitem__(self, index: int, return_element:bool = False) -> Tuple[Any, Any, Any]: # aggiungere altro tipo, features delle immagini
         id = self.ids[index] # index = 0, 1, 2 ... *-*-* id = 139, ... (sono gli ID nella sezione "images" json)
@@ -181,31 +190,13 @@ class CocoDetection(VisionDataset):
         # some images have more than 5 captions, we take the first 5
         target_partial = target_partial[:5]
 
-        mod_entity_prompts = [p.replace('[NAME]', entity_name) for p in self.entity_prompts]
-        
-        if self.features is not None and self.normal_behaviour == False:
-            if self.only_TOK:
-                target = [[p + "." for p in mod_entity_prompts]]
-            else:
-                if self.mod_captions and self.key_words is not None:
-                    target = [self.caption_configuration(str(target), modalities=['after', 'before', 'middle'], entity_name=entity_name, template=self.mod_captions) for target in target_partial]
-                else:
-                    target = [[p + ". " + str(target) for p in mod_entity_prompts] for target in target_partial]
-            list_features = self.features[id] # 
-            if not self.single_caption:
-                list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
-            else:
-                list_features = list_features.unsqueeze(0)
-
-        elif self.entity_to_name is not None:
-            # this is normal behavior, but we use the real proper name (e.g. Mario Rossi) instead of the generic name (e.g. person)
-            if self.only_TOK:
-                target = [[p + "." for p in mod_entity_prompts]]
-            else:
-                target = [self.caption_configuration(str(target), modalities=['middle'], entity_name=entity_name, template=self.mod_captions) for target in target_partial]
-
+        list_features = self.features[id]
+        if not self.single_caption:
+            target = [self.caption_configuration(str(target), entity_name=entity_name, templates=self.templates, entity_expansion_template=self.entity_expansion) for target in target_partial]
+            list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
         else:
-            target = [[t] for t in target_partial]
+            target = [self.caption_configuration(None, entity_name=entity_name, templates=self.templates, entity_expansion_template=self.entity_expansion)]
+            list_features = list_features.unsqueeze(0)
 
         if return_element and not self.face_swap_train:
             return image, target

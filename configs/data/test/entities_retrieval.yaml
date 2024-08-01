@@ -1,4 +1,0 @@
-dataset:
-  face_swap_train: true
-  only_TOK: true
-  single_caption: true

@@ -39,13 +39,25 @@ val_general_retrieval:  # 5 entities
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
     entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
-    entity_prompts:
-      - "An image with [TOK]"
-      - "An image containing [TOK]"
-      - "[TOK]"
-      - "A picture of [TOK]"
-      - "[TOK] in the image"
-      - "There is [TOK] in the picture"
+    templates:
+    - "An image with [ENTITY]. [CAPTION]"
+    - "An image with a person whose name is [ENTITY]. [CAPTION]"
+    - "[ENTITY]. [CAPTION]"
+    - "A picture of [ENTITY]. [CAPTION]"
+    - "[ENTITY] in the image. [CAPTION]"
+    - "There is [ENTITY] in the picture. [CAPTION]"
+    # CHUNK_1 and CHUNK_2 requires the keyword to exist
+    - "[C_CHUNK_1] [ENTITY] [C_CHUNK_2]"
+    - "[C_CHUNK_1] [KEYWORD] ([ENTITY]) [C_CHUNK_2]"
+    - "[C_CHUNK_1] [KEYWORD] (whose name is [ENTITY]) [C_CHUNK_2]"  # this should be done only if name is not none
+
+    # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
+    entity_expansion: "[T_CHUNK_1][TOK][T_CHUNK_2]"
+      # - "[T_CHUNK_1] [TOK] [T_CHUNK_2]"
+      # - "[T_CHUNK_1] [TOK] [NAME] [T_CHUNK_2]"
+      # - "[T_CHUNK_1] [NAME] [TOK] [T_CHUNK_2]"
+      # - "An image with [TOK]. [T_CHUNK_1] [NAME] [T_CHUNK_2]"
+      # - "[TOK]. [T_CHUNK_1] [NAME] [T_CHUNK_2]"
   dataloader: 
     <<: *dataloader
 
@@ -59,13 +71,22 @@ val_entities_retrieval:  # 5 entities
     entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     only_TOK: true
     single_caption: true
-    entity_prompts:
-      - "An image with [TOK]"
-      - "An image containing [TOK]"
-      - "[TOK]"
-      - "A picture of [TOK]"
-      - "[TOK] in the image"
-      - "There is [TOK] in the picture"
+    # C_CHUNK_1 and C_CHUNK_2 are the two captions chunks generating from splitting the caption at the keyword
+    templates:
+      - "An image with [ENTITY]."
+      - "An image with a person whose name is [ENTITY]."
+      - "[ENTITY]."
+      - "A picture of [ENTITY]."
+      - "[ENTITY] in the image."
+      - "There is [ENTITY] in the picture."
+
+    # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
+    entity_expansion: "[T_CHUNK_1][TOK][T_CHUNK_2]"
+      # - "[T_CHUNK_1] [TOK] [T_CHUNK_2]"
+      # - "[T_CHUNK_1] [TOK] [NAME] [T_CHUNK_2]"
+      # - "[T_CHUNK_1] [NAME] [TOK] [T_CHUNK_2]"
+      # - "An image with [TOK]. [T_CHUNK_1] [NAME] [T_CHUNK_2]"
+      # - "[TOK]. [T_CHUNK_1] [NAME] [T_CHUNK_2]"
   dataloader: 
     <<: *dataloader
 

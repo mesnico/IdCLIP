@@ -2,3 +2,10 @@ dataset:
   face_swap_train: true
   normal_behavior: true
   use_original_names: false
+
+  # C_CHUNK_1 and C_CHUNK_2 are the two captions chunks generating from splitting the caption at the keyword
+  templates:
+    - "[CAPTION]"
+
+  # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
+  entity_expansion: null
