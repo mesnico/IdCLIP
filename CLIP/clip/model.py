@@ -362,9 +362,9 @@ class CLIP(nn.Module):
             text[tok_mask] = 1 # substitute a codificable value by CLIP
             indices = tok_mask.nonzero()[:,1] # ONLY considering a single face in an image
             features = features.to(torch.float16) # ***WARNING*** Lost information on the face features
-        elif features is None and not normal_beh and self.vocab_size > 49407: # 49407 is the default dimension of the vocab
-            raise ValueError("Mismatch Vocab_size")
-            return
+        # elif features is None and not normal_beh and self.vocab_size > 49407: # 49407 is the default dimension of the vocab
+        #     raise ValueError("Mismatch Vocab_size")
+        #     return
         
         # inserire condizione per cui se features is None ma il vocab_size è maggiore di quello standard allora ritorna un errore
         #print(text.shape)

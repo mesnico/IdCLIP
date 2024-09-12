@@ -109,7 +109,7 @@ class IdCLIP(CLIPBaseline):
         self,
         images: Tensor,
         texts: Tensor,
-        facial_features: Tensor,
+        facial_features: Tensor = None,
         entities: Optional[List] = None,
         single_caption: bool = True,
     ) -> List[Tensor]:
