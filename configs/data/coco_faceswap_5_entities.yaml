@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - test: general_retrieval_tok_beginning
+  - test: general_retrieval_conf4
   - train: tok_beginning_multi_prompts
 
 datadir: /home/messina/data_messina/DatiMaltese
@@ -18,7 +18,7 @@ train:
     root: "${data.datadir}/coco_dataset/coco_train_swapped"
     annFile: "${data.datadir}/coco_dataset/annotations/captions_train2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_training_set/features_train_small_faceswap.json"
-    entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
+    # entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     entity_prompts:
       - "An image with [TOK]"
       - "An image containing [TOK]"
@@ -38,7 +38,28 @@ val_general_retrieval:  # 5 entities
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
+    use_original_names: true
     entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
+    key_words: 
+    - "person"
+    - "man"
+    - "mother"
+    - "father"
+    - "dad"
+    - "mum"
+    - "woman"
+    - "child"
+    - "boy"
+    - "guy"
+    - "girl"
+    - "kid"
+    - "human"
+    - "adult"
+    - "male"
+    - "female"
+    - "lady"
+    - "teenager"
+    - "baby"
     templates:
     - "An image with [ENTITY]. [CAPTION]"
     - "An image with a person whose name is [ENTITY]. [CAPTION]"
@@ -68,6 +89,7 @@ val_entities_retrieval:  # 5 entities
     annFile: "${data.datadir}/coco_dataset/annotations/captions_val2017.json"
     features_json: "${data.datadir}/Visual_Name_Entity_Recognition/gender_faceswap_new_val_test_set/features_new_val_small_faceswap.json"
     face_swap_train: true
+    use_original_names: true
     entities_to_names_file: "${data.datadir}/vggface_test_kaggle/identity_meta.csv"
     only_TOK: true
     single_caption: true

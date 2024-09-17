@@ -40,8 +40,7 @@ def train(cfg: DictConfig):
     logger.info("Loading the model")
     model = instantiate(cfg.model)
     transform = model.transform
-
-    target_transform=lambda texts: clip.tokenize(texts)
+    target_transform = model.tokenizer # lambda texts: clip.tokenize(texts)
 
     logger.info("Loading the dataloaders")
     train_dataset = instantiate(cfg.data.train.dataset, transform=transform, target_transform=target_transform)

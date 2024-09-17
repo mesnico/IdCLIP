@@ -6,12 +6,14 @@ defaults:
 _target_: src.model.IdCLIP
 
 clip_model: 
-  _target_: clip.load
-  name: "ViT-L/14@336px"
+  _target_: open_clip.create_model_from_pretrained
+  model_name: hf-hub:laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K
   shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
   shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
-tokenizer: null # use the default one by clip
+tokenizer:
+  _target_: open_clip.get_tokenizer
+  model_name: hf-hub:laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K
 
 train_visual_encoder: ${finetuning.train_visual_encoder}
 train_text_encoder: ${finetuning.train_text_encoder}

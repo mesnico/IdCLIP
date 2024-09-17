@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from .evaluation import only_tok_metrics, recall_at_k
 from torch import Tensor
+import clip
 
 import torch
 import torch.nn as nn
@@ -20,6 +21,7 @@ class IdCLIP(CLIPBaseline):
     def __init__(
         self,
         clip_model,
+        tokenizer,
         translator: nn.Module,
         loss: nn.Module,
         lr: float = 1e-4,
@@ -35,6 +37,7 @@ class IdCLIP(CLIPBaseline):
 
         # adding the CLIP model
         self.clip_model, self.transform = clip_model
+        self.tokenizer = tokenizer if tokenizer is not None else clip.tokenize
 
         # adding the translator model
         self.translator_model = translator
