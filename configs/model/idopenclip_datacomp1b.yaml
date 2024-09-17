@@ -9,7 +9,7 @@ clip_model:
   _target_: open_clip.create_model_from_pretrained
   model_name: hf-hub:laion/CLIP-ViT-L-14-DataComp.XL-s13B-b90K
   shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
-  shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
+  # shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
 tokenizer:
   _target_: open_clip.get_tokenizer

@@ -8,7 +8,7 @@ _target_: src.model.IdCLIP
 clip_model: 
   _target_: open_clip.create_model_from_pretrained
   model_name: hf-hub:laion/CLIP-ViT-L-14-laion2B-s32B-b82K
-  # shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
+  shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
   # shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
 tokenizer:

@@ -9,7 +9,7 @@ clip_model:
   _target_: open_clip.create_model_from_pretrained
   model_name: hf-hub:timm/ViT-SO400M-14-SigLIP-384
   shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
-  shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
+  # shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
 tokenizer:
   _target_: open_clip.get_tokenizer
