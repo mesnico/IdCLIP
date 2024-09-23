@@ -3,6 +3,7 @@ from typing import List, Dict, Optional
 from .evaluation import only_tok_metrics, recall_at_k
 from torch import Tensor
 import clip
+import open_clip
 
 import torch
 import torch.nn as nn
@@ -38,6 +39,12 @@ class IdCLIP(CLIPBaseline):
         # adding the CLIP model
         self.clip_model, self.transform = clip_model
         self.tokenizer = tokenizer if tokenizer is not None else clip.tokenize
+
+        if isinstance(self.tokenizer, open_clip.tokenizer.HFTokenizer):
+            # FIXME: since modifying the transformers tokenizer is too expensive, we use the MASK token as the TOK token. This is a temporary solution and should be avoided.
+            self.tok_token_id = self.tokenizer.tokenizer.mask_token_id
+        else:
+            self.tok_token_id = None
 
         # adding the translator model
         self.translator_model = translator
@@ -130,7 +137,7 @@ class IdCLIP(CLIPBaseline):
             translated_features = self.translator_model(facial_features)
             
             translated_features = translated_features.unsqueeze(1).expand(-1, np, -1, -1).flatten(start_dim=0, end_dim=1)
-            text_features = self.clip_model.encode_text(texts, translated_features)
+            text_features = self.clip_model.encode_text(texts, translated_features, tok_token_id=self.tok_token_id)
 
         # mean pooling over different prompts
         text_features = text_features.view(bs * nc, np, -1)

@@ -1,0 +1,26 @@
+defaults:
+  - translator: mlp-1-layer
+  - loss: info-nce
+  - _self_
+
+_target_: src.model.IdCLIP
+
+clip_model: 
+  _target_: open_clip.create_model_from_pretrained
+  model_name: hf-hub:UCSC-VLAA/ViT-H-14-CLIPA-336-laion2B
+  shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
+  # shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
+
+tokenizer:
+  _target_: open_clip.get_tokenizer
+  model_name: hf-hub:UCSC-VLAA/ViT-H-14-CLIPA-336-laion2B
+
+train_visual_encoder: ${finetuning.train_visual_encoder}
+train_text_encoder: ${finetuning.train_text_encoder}
+encoders_lr: ${finetuning.encoders_lr}
+training_setup: ${training_setup}
+
+lr: 5e-5
+
+translator:
+  output_dim: 1024
