@@ -10,3 +10,4 @@ colorlog
 tensorboard
 more_itertools
 seaborn
+transformers
