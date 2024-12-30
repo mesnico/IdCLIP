@@ -1,6 +1,6 @@
 dataset:
   face_swap_train: true
-  normal_behavior: true
+  # mod_captions: "[TOK], [NAME],"
   use_original_names: true
   key_words: 
     - "person"
@@ -41,7 +41,7 @@ dataset:
   templates_ensembling: False
 
   # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
-  entity_expansion: "[T_CHUNK_1][NAME][T_CHUNK_2]"
+  entity_expansion: "[TOK]. [T_CHUNK_1][TOK][T_CHUNK_2]"
     # - "[T_CHUNK_1] [TOK] [T_CHUNK_2]"
     # - "[T_CHUNK_1] [TOK] [NAME] [T_CHUNK_2]"
     # - "[T_CHUNK_1] [NAME] [TOK] [T_CHUNK_2]"

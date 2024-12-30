@@ -22,10 +22,10 @@ class IdCLIP(CLIPBaseline):
     def __init__(
         self,
         clip_model,
-        tokenizer,
         translator: nn.Module,
         loss: nn.Module,
         lr: float = 1e-4,
+        tokenizer = None,
         train_visual_encoder: str = None,
         train_text_encoder: str = None,
         encoders_lr: float = 1e-6,

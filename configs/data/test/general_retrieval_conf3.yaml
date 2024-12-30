@@ -38,6 +38,8 @@ dataset:
     - "[C_CHUNK_1] famous [KEYWORD] [ENTITY] [C_CHUNK_2]"
     - "[C_CHUNK_1] famous [ENTITY] [C_CHUNK_2]"
 
+  templates_ensembling: False
+
   # T_CHUNK_1 and T_CHUNK_2 are the two text chunks generating from splitting the template at the [ENTITY]
   entity_expansion: "[T_CHUNK_1][NAME] [TOK][T_CHUNK_2]"
     # - "[T_CHUNK_1] [TOK] [T_CHUNK_2]"

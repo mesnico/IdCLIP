@@ -11,7 +11,7 @@ clip_model:
   shallow_visual_prompt_tokens: ${finetuning.shallow_visual_prompt_tokens}
   shallow_text_prompt_tokens: ${finetuning.shallow_text_prompt_tokens}
 
-tokenizer: null # use the default one by clip
+tokenizer: None # use the default one by clip
 
 train_visual_encoder: ${finetuning.train_visual_encoder}
 train_text_encoder: ${finetuning.train_text_encoder}

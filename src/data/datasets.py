@@ -38,6 +38,7 @@ class CocoDetection(VisionDataset):
         single_caption: bool = False,
         normal_behavior: bool = False,
         templates: List[str] = None,
+        templates_ensembling: bool = True,
         entity_expansion: str = None,
         key_words: List[str] = None,
         entities_to_names_file: str = None,
@@ -82,6 +83,7 @@ class CocoDetection(VisionDataset):
         else:
             self.entity_to_name = None
 
+        self.templates_ensembling = templates_ensembling
         #print(self.ids)
 
     def _load_image(self, id: int, entity = None) -> Image.Image:
@@ -108,6 +110,15 @@ class CocoDetection(VisionDataset):
         return k, counter
 
     def caption_configuration(self, caption, templates=None, entity_expansion_template=None, entity_name=None):
+        default_templates = [
+            "An image with [ENTITY]. [CAPTION]",
+            "An image with a person whose name is [ENTITY]. [CAPTION]",
+            "[ENTITY]. [CAPTION]",
+            "A picture of [ENTITY]. [CAPTION]",
+            "[ENTITY] in the image. [CAPTION]",
+            "There is [ENTITY] in the picture. [CAPTION]"
+        ]
+
         assert not (any(['CAPTION' in t or 'C_CHUNK' in t for t in templates]) and caption is None)
         word_ref = None
         count = 0
@@ -134,14 +145,19 @@ class CocoDetection(VisionDataset):
         if word_ref is not None and count == 1 and len(caption_split) == 2:
             captions = [
                 t
-                .replace('a [ENTITY]', '[ENTITY]')
-                .replace('A [ENTITY]', '[ENTITY]')
-                .replace('an [ENTITY]', '[ENTITY]')
-                .replace('An [ENTITY]', '[ENTITY]')
                 .replace('[C_CHUNK_1]', caption_split[0].strip())
                 .replace('[C_CHUNK_2]', caption_split[1].strip())
                 .replace('[KEYWORD]', word_ref)
                 for t in templates_w_keyword
+            ]
+
+            captions = [
+                t
+                .replace(' a [ENTITY]', ' [ENTITY]')
+                .replace('A [ENTITY]', '[ENTITY]')
+                .replace(' an [ENTITY]', ' [ENTITY]')
+                .replace('An [ENTITY]', '[ENTITY]')
+                for t in captions
             ]
 
             captions = [re.sub(fr',(?![\s\d])', ', ', t) if re.search(fr',(?!\s)', t) else t for t in captions]
@@ -150,7 +166,11 @@ class CocoDetection(VisionDataset):
         elif (count != 1 or len(caption_split) != 2) and self.key_words is not None:
             # repeat some captions for the last 3 elements to have alsways the same number of elements in the list
             # otherwise it is difficult to batch them
-            new_captions.extend(random.choices(new_captions, k=len(templates_w_keyword)))
+            if len(new_captions) > 0:
+                new_captions.extend(random.choices(new_captions, k=len(templates_w_keyword)))
+            else:
+                new_captions = random.choices(default_templates, k=len(templates_w_keyword))
+                new_captions = [c.replace('[CAPTION]', caption) for c in new_captions]
 
         # substitute [ENTITY] with the entity_expansion
         split_captions = [c.split('[ENTITY]') if '[ENTITY]' in c else None for c in new_captions]
@@ -163,8 +183,8 @@ class CocoDetection(VisionDataset):
             for sc, c in zip(split_captions, new_captions)
         ]
 
+        assert not any(['[CAPTION]' in c for c in new_captions]), f"Something should not have happened."
         # assert not any([('[' in c) and (']' in c) for c in new_captions]), f"Error in caption configuration: {new_captions}"
-
         return new_captions
         
 
@@ -192,9 +212,14 @@ class CocoDetection(VisionDataset):
 
         list_features = self.features[id]
         if not self.single_caption:
-            target = [self.caption_configuration(str(target), entity_name=entity_name, templates=self.templates, entity_expansion_template=self.entity_expansion) for target in target_partial]
-            list_features = list_features.repeat(5,1,1) # [n_caption, 1, 1] 
+            if self.templates_ensembling:
+                target = [self.caption_configuration(str(target), entity_name=entity_name, templates=self.templates, entity_expansion_template=self.entity_expansion) for target in target_partial]
+                list_features = list_features.repeat(5, 1, 1) # [n_caption, 1, 1] 
+            else:
+                target = [self.caption_configuration(str(target), entity_name=entity_name, templates=[template], entity_expansion_template=self.entity_expansion) for target, template in itertools.product(target_partial, self.templates)]
+                list_features = list_features.repeat(5 * len(self.templates), 1, 1)
         else:
+            # assert not self.templates_ensembling, "Single caption and ensembling templates are not compatible"
             target = [self.caption_configuration(None, entity_name=entity_name, templates=self.templates, entity_expansion_template=self.entity_expansion)]
             list_features = list_features.unsqueeze(0)
 

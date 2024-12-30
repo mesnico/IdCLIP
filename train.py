@@ -22,10 +22,9 @@ def train(cfg: DictConfig):
 
     # Resuming if needed
     ckpt = None
-    if cfg.resume_dir is not None:
-        assert cfg.ckpt is not None
-        ckpt = cfg.ckpt
-        cfg = read_config(cfg.resume_dir)
+    if cfg.resume:
+        ckpt = next(run_dir.glob("logs/checkpoints/latest-epoch*"))
+        cfg = read_config(run_dir)
         logger.info("Resuming training")
         logger.info(f"The config is loaded from: \n{cfg.resume_dir}")
     else:

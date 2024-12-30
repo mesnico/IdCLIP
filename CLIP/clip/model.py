@@ -356,15 +356,17 @@ class CLIP(nn.Module):
     def encode_image(self, image):
         return self.visual(image.type(self.dtype))
 
-    def encode_text(self, text, features=None, normal_beh = False):
+    def encode_text(self, text, features=None, normal_beh=False, tok_token_id=None):
         if features is not None: 
             tok_mask = text == self.vocab_size # the token [TOK] have the id equals to the dimension of the vocab
             text[tok_mask] = 1 # substitute a codificable value by CLIP
-            indices = tok_mask.nonzero()[:,1] # ONLY considering a single face in an image
+            # indices = tok_mask.nonzero()[:,1] # ONLY considering a single face in an image
             features = features.to(torch.float16) # ***WARNING*** Lost information on the face features
         # elif features is None and not normal_beh and self.vocab_size > 49407: # 49407 is the default dimension of the vocab
         #     raise ValueError("Mismatch Vocab_size")
         #     return
+
+        sequence_length = text.shape[1]
         
         # inserire condizione per cui se features is None ma il vocab_size è maggiore di quello standard allora ritorna un errore
         #print(text.shape)
@@ -372,9 +374,12 @@ class CLIP(nn.Module):
         
         if features is not None:
         #-------------------------------------------------------------------------------
-            index = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, 1, x.shape[2])
+            # index = indices.unsqueeze(-1).unsqueeze(-1).expand(-1, 1, x.shape[2])
             #print(x.dtype, features.dtype)
-            x = x.scatter_(1, index, features)
+            # x = x.scatter_(1, index, features)
+            features = features.expand(-1, sequence_length, -1)
+            x = torch.where(tok_mask.unsqueeze(-1), features, x)
+
         #--------------------------------------------------------------------------------
         
         x = x + self.positional_embedding.type(self.dtype)

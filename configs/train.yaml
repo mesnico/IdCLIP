@@ -1,5 +1,5 @@
 ckpt: best-contrastive-sum
-resume_dir: null
+resume: False
 
 # run_dir: outputs/${hydra:runtime.choices.model}_${hydra:runtime.choices.data}_${hydra:runtime.choices.data/motion_loader}
 
