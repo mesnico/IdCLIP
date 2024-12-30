@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUDA_DEVICE=2
+CUDA_DEVICE=0
 EXP_ROOT="./runs"
 
 DATA=coco_faceswap_5_entities
@@ -8,7 +8,7 @@ MODEL=idclip
 LR="5e-05"
 
 CKPTS=(
-    best-entities-sum 
+    # best-entities-sum 
     best-contrastive-sum
 )
 
@@ -23,6 +23,42 @@ TEST_CONFIGS=(
     general_retrieval_conf3
     general_retrieval_conf4
     general_retrieval_conf5
+    general_retrieval_baseline
+    general_retrieval_baseline_with_original_names
+    entities_retrieval_baseline_with_original_names
+
+    # entities_retrieval_conf1_2toks
+    # entities_retrieval_conf1_3toks
+    entities_retrieval_conf6
+    #general_retrieval_conf1_2toks
+    #general_retrieval_conf1_3toks
+    #general_retrieval_conf1_static
+    #general_retrieval_conf2_static
+    #general_retrieval_conf3_static
+    general_retrieval_conf6
+
+    # general_retrieval_conf1_static
+    # general_retrieval_conf1_static2
+    # general_retrieval_conf1_static3
+    # general_retrieval_conf1_static4
+    # general_retrieval_conf1_static5
+    # general_retrieval_conf1_static6
+    # general_retrieval_conf1_static7
+    # general_retrieval_conf1_static8
+    # general_retrieval_conf1_static9
+    # general_retrieval_conf1_static10
+    # general_retrieval_conf1_static11
+    # general_retrieval_conf3_static
+    # general_retrieval_conf3_static2
+    # general_retrieval_conf3_static3
+    # general_retrieval_conf3_static4
+    # general_retrieval_conf3_static5
+    # general_retrieval_conf3_static6
+    # general_retrieval_conf3_static7
+    # general_retrieval_conf3_static8
+    # general_retrieval_conf3_static9
+    # general_retrieval_conf3_static10
+    # general_retrieval_conf3_static11
 )
 
 TRANSLATORS=(
@@ -32,7 +68,7 @@ TRANSLATORS=(
 TOK_POSITIONS=(
     # tok_beginning_fixed_prompt
     tok_beginning_multi_prompts
-    tok_in_place_multi_prompts
+    # tok_in_place_multi_prompts
 )
 
 TRAINING_SETUPS=(

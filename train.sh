@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # set -e
-CUDA_DEVICE=2
+CUDA_DEVICE=0
 # Train & Evaluate
 # Perform multiple repetitions of the same experiment, varying the split seed (for cross-validation)
+
+MODEL=idclip
 
 TRANSLATORS=(
     mlp-1-layer
@@ -12,24 +14,23 @@ TRANSLATORS=(
 TOK_POSITIONS=(
     # tok_beginning_fixed_prompt
     tok_beginning_multi_prompts
-    tok_in_place_multi_prompts
+    # tok_in_place_multi_prompts
 )
 
 TRAINING_SETUPS=(
     with_entities
-    with_entities_and_only_entities
 )
 
 FINETUNINGS=(
-    # disabled
     shallow-vpt-5
-    shallow-tpt-5
-    shallow-vpt-5-tpt-5
+    disabled
+    # shallow-tpt-5
+    # shallow-vpt-5-tpt-5
 )
 
 LOSSES=(
-    # info-nce
-    info-nce-entity-bce
+    info-nce
+    # info-nce-entity-bce
 )
 
 IFS=,
@@ -44,6 +45,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_DEVICE HYDRA_FULL_ERROR=1 conda run --no-capture-outp
     finetuning="$FINETUNINGS" \
     training_setup="$TRAINING_SETUPS" \
     data/train="$TOK_POSITIONS" \
+    model="$MODEL" \
     model/translator="$TRANSLATORS" \
     model/loss="$LOSSES"
 
