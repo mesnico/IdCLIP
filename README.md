@@ -20,7 +20,16 @@ This repository contains the official implementation of our ECIR 2025 paper. The
 
 ## Citation
 
-If you use this code or dataset in your research, please cite our paper: TODO
+If you use this code or dataset in your research, please cite our paper:
+
+```bibtex
+@article{messina2024towards,
+    title={Towards Identity-Aware Cross-Modal Retrieval: a Dataset and a Baseline},
+    author={Messina, Nicola and Vadicamo, Lucia and Maltese, Leo and Gennaro, Claudio},
+    journal={arXiv preprint arXiv:2412.21009},
+    year={2024}
+}
+```
 
 ## Getting Started
 
@@ -38,11 +47,14 @@ To get started, follow the instructions below:
     ```
 
 3. **Download the dataset:**
-    The dataset can be downloaded from this [Zenodo link](#). Since the images contain deepfakes of known persons and may therefore violate privacy policies, the data is only available for research purposes in restricted mode (i.e., an explicit access request has to be pursued through the provided Zenodo link). 
+    The dataset has to be assembled under the `data` folder using the following steps:
+
+    1. Download the [COCO annotations](http://images.cocodataset.org/annotations/annotations_trainval2014.zip) and extract the zip in the `data` folder.
+    2. The actual COCO-PFS dataset can be downloaded from this [Zenodo link](https://zenodo.org/records/14615263). Since the images contain deepfakes of known persons and may therefore violate privacy policies, the data is only available for research purposes in restricted mode (i.e., an explicit access request has to be pursued through the provided Zenodo link). 
     
     Notice that modified captions are not part of the dataset, since they are modified on-the-fly during the dataloading procedure used both at training and test time. In the near future, we will dump these captions on file and add them to the dataset so to make it more self-contained.
 
-    *Important*: the data folder should be set by properly modifying the `datadir` entry in `configs/data/coco_faceswap_5_entities.yaml`.
+    *Important*: by default, it is assumed the dataset files are placed in the `data` folder. If they are instead placed on a different path, you should modify the `datadir` entry in `configs/data/coco_faceswap_5_entities.yaml` accordingly.
 
 
 ## Training
